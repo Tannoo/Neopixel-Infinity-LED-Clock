@@ -8,8 +8,8 @@
 #include <ESP8266WiFi.h>     // For WiFi
 #include <WiFiUdp.h>         // For UDP NTP
 unsigned long NTPreqnum = 0; // For NTP
-char ssid[] = "WTanno";
-char pass[] = "tannothegreat!";
+char ssid[] = "SSID";        // Your network name
+char pass[] = "PASSWORD";    // Your network password
 
 // >>>>>>> OTA STUFF <<<<<<<
 // *************************
@@ -361,9 +361,12 @@ void digitalClockDisplay() {
   Serial.println();
   Serial.println();
 
-  RTC.adjust(DateTime(year(), month(), day(), hr, minute(), second()));
+  if ((now.hour() + now.minute()) != (hr + minute()))
+    RTC.adjust(DateTime(year(), month(), day(), hr, minute(), second()));
+
   RTC.now();
 
+  // Show RTC time after adjustment from NTP
   Serial.print("NTP adjusted RTC time: ");
   Serial.print(now.month(), DEC);
   Serial.print('/');
@@ -379,6 +382,7 @@ void digitalClockDisplay() {
   Serial.print(now.second(), DEC);
   Serial.println();
 
+  // Set the time data for the clock to use
   if (now.hour() >= 12) h = (now.hour() - 12) * (NUMPIXELS / 12);
     else h = now.hour() * (NUMPIXELS / 12);
   m = now.minute();
