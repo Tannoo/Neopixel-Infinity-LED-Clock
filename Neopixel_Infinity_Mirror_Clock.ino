@@ -52,29 +52,27 @@ byte neopix_gamma[] = {
   177,180,182,184,186,189,191,193,196,198,200,203,205,208,210,213,
   215,218,220,223,225,228,231,233,236,239,241,244,247,249,252,255 };
 
-#define CHCOLOR1  neopix_gamma[j], 0, 0                                 // Red
-#define CHCOLOR2  neopix_gamma[j], 0, 0, neopix_gamma[j]                // Lt. Red
-#define CHCOLOR3  neopix_gamma[j], neopix_gamma[j], 0                   // Yellow
-#define CHCOLOR4  0, neopix_gamma[j], 0                                 // Green
-#define CHCOLOR5  0, neopix_gamma[j], 0, neopix_gamma[j]                // Lt. Green
-#define CHCOLOR6  0, neopix_gamma[j], neopix_gamma[j]                   // Teal
-#define CHCOLOR7  0, 0, neopix_gamma[j]                                 // Blue
-#define CHCOLOR8  0, 0, neopix_gamma[j], neopix_gamma[j]                // Lt. Blue
-#define CHCOLOR9  neopix_gamma[j], 0, neopix_gamma[j]                   // Purple
-#define CHCOLOR10  neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]    // RGB White
-#define CHCOLOR11  neopix_gamma[j], 0, neopix_gamma[j], neopix_gamma[j] // Lt. Purple
-#define CHCOLOR12  0, neopix_gamma[j], neopix_gamma[j], neopix_gamma[j] // Lt. Teal
+#define CHCOLOR1  neopix_gamma[j],               0,               0                  // Red
+#define CHCOLOR2  neopix_gamma[j],               0,               0, neopix_gamma[j] // Lt. Red
+#define CHCOLOR3  neopix_gamma[j], neopix_gamma[j],               0                  // Yellow
+#define CHCOLOR4                0, neopix_gamma[j],               0                  // Green
+#define CHCOLOR5                0, neopix_gamma[j],               0, neopix_gamma[j] // Lt. Green
+#define CHCOLOR6                0, neopix_gamma[j], neopix_gamma[j]                  // Teal
+#define CHCOLOR7                0,               0, neopix_gamma[j]                  // Blue
+#define CHCOLOR8                0,               0, neopix_gamma[j], neopix_gamma[j] // Lt. Blue
+#define CHCOLOR9  neopix_gamma[j],               0, neopix_gamma[j]                  // Purple
+#define CHCOLOR10 neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]                  // RGB White
+#define CHCOLOR11 neopix_gamma[j],               0, neopix_gamma[j], neopix_gamma[j] // Lt. Purple
+#define CHCOLOR12               0, neopix_gamma[j], neopix_gamma[j], neopix_gamma[j] // Lt. Teal
 
 /*
-  h  = Base hour
-  sh = Sweeping hour
-  hr = RTC hour
-  m  = Base minute
-  s  = Base second
+  h  = Base hour, hr = RTC hour
+  m  = Base minute, s  = Base second
   ms = Base millisecond
+  Others are for LED fading operations
 */
 uint8_t ms, s, m, mf, h, hf, sh, hr;
-uint8_t oldsec, old_mf, oldmin, old_hf, old_hr, oldhr;
+uint8_t oldsec, old_mf, oldmin, old_hf, old_hr;
 uint8_t backgnd_white, m_backgnd_fade, h_backgnd_fade;
 uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
 
@@ -156,7 +154,8 @@ void setup(void) {
   // *******************************
   Wire.begin(); // Start the I2C
   RTC.begin();  // Init RTC
-  RTC.adjust(DateTime(__DATE__, __TIME__));  // Time and date is expanded to date and time on your computer at compiletime
+  // Time and date is expanded to date and time on your computer at compile time
+  RTC.adjust(DateTime(__DATE__, __TIME__));
   Serial.print("Time and date set");
 
   Serial.println("Starting UDP");
@@ -194,14 +193,19 @@ void setup(void) {
 
   Serial.println("Getting RTC time...");
   digitalClockDisplay();
-  oldhr = sh; old_hr = hr; oldmin = m; oldsec = s;
+  old_hr = hr; oldmin = m; oldsec = s;
 
-  hourchime(5);
+  delay(500);
+  if (m == 0) hourchime(5);
+  else {
+    backgnd_white = random(0, 127);
+    FadeonBackgnd(5);    
+  }
 }
 
 void loop() {
   ArduinoOTA.handle();
-  oldhr = sh; oldmin = m; oldsec = s;
+  oldmin = m; oldsec = s;
 
   DateTime now = RTC.now();
   if (now.hour() >= 12) h = (now.hour() - 12) * (NUMPIXELS / 12);
@@ -210,14 +214,14 @@ void loop() {
   s = now.second(); 
 
   // Chime
-  if (old_hr != sh && m == 0) {
+  if (old_hr != hr && m == 0) {
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeoffBackgnd(5);
     delay(200);
     setDST(true);
     hourchime(3);
     backgnd_white = random(0, 127);
-    old_hr = sh;
+    old_hr = hr;
   }
 
   // digital clock display of the time
@@ -230,70 +234,64 @@ void loop() {
     digitalClockDisplay();
   }
 
-  // **** Time ****
+  // **************
+  //      TIME
+  // **************
 
-  // Map and set the fading minute color.
+  // Tried a few times to fade the second's LED and it just makes the
+  // second's LED black. No fading to be seen.
+
+  // Map and set the fading minute colors.
   mf = map(s, 0, NUMPIXELS - 1, backgnd_white, 255);
   old_mf = map(s, 0, NUMPIXELS - 1, 255, backgnd_white);
-
+  // Map and fade the backgroud intensities
   m_backgnd_fade = map(s, 0, NUMPIXELS - 1, backgnd_white, 0);
   oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, backgnd_white);
 
-  // Map and set the fading hour color.
+  // Map and set the fading hour colors.
   hf = map(m, 0, NUMPIXELS - 1, backgnd_white, 255);
   old_hf = map(m, 0, NUMPIXELS - 1, 255, backgnd_white);
-
+  // Map and fade the backgroud intensities
   h_backgnd_fade = map(m, 0, NUMPIXELS - 1, backgnd_white, 0);
   oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, backgnd_white);
 
   // Map and set the hour LED position.
   sh = map(m, 0, NUMPIXELS - 1, h, h + 4);
 
+  // Setting the LED positions for the time
   for (ms = 0; ms <= NUMPIXELS - 1; ms ++) {
-    if (ms == sh && oldhr != sh) strip.setPixelColor(ms, strip.Color(H_COLOR));
-    else if (ms == sh) strip.setPixelColor(ms, strip.Color(H_COLOR));
-    else if (ms == sh + 1) strip.setPixelColor(ms, strip.Color(H_COLOR));
+    strip.setPixelColor(ms, strip.Color(MS_COLOR));    // Set the millisecond color
+    strip.setPixelColor(sh + 1, strip.Color(H_COLOR)); // Set hour color
+    strip.setPixelColor(sh, strip.Color(OLD_H_COLOR)); // Set the old hour color
+    if (m == sh || m == sh + 1) strip.setPixelColor(m, strip.Color(MH_COLOR)); // Set the minute and hour combined color
+    strip.setPixelColor(m + 1, strip.Color(M_COLOR));  // Set the minute color
+    strip.setPixelColor(m, strip.Color(OLD_M_COLOR));  // Set the old minute color
+    strip.setPixelColor(s, strip.Color(S_COLOR));      // Set the second color
 
-    else if (ms == m && m != oldmin) strip.setPixelColor(ms, strip.Color(OLD_M_COLOR));
-    else if (ms == m) strip.setPixelColor(ms, strip.Color(M_COLOR));
-    else if (ms == m + 1) strip.setPixelColor(ms, strip.Color(M_COLOR));
-
-    else if (ms == s && s != oldsec) strip.setPixelColor(ms, strip.Color(S_COLOR));
-    else if (ms == s) strip.setPixelColor(ms, strip.Color(S_COLOR));
-
-    else strip.setPixelColor(ms, strip.Color(MS_COLOR));
-    strip.show();
+    strip.show();  // Set the LEDs
     ESP.wdtFeed(); // Keep the watchdogs happy
-
     delay(718 / NUMPIXELS); // Change the ms delay for secs to match the LEDs.
-    strip.setPixelColor(ms, strip.Color(BACKGND));
-    strip.setPixelColor(sh, strip.Color(OLD_H_COLOR));
-    strip.setPixelColor(sh + 1, strip.Color(H_COLOR));
-    if (oldhr != sh)
-      strip.setPixelColor(oldhr, strip.Color(BACKGND));
-    if (m == sh)
-      strip.setPixelColor(m, strip.Color(MH_COLOR));
-    else
-      strip.setPixelColor(m, strip.Color(OLD_M_COLOR));
-      strip.setPixelColor(m + 1, strip.Color(M_COLOR));
-    if (oldmin != m && oldmin != sh)
-      strip.setPixelColor(oldmin, strip.Color(BACKGND));
-    if (s == 0 && oldsec != sh && oldsec != m && !ms != sh && ms != m && sh != NUMPIXELS - 1 && m != NUMPIXELS - 1)
-      strip.setPixelColor(NUMPIXELS - 1, strip.Color(BACKGND));
-    strip.setPixelColor(s, strip.Color(S_COLOR));
-    if (oldsec != s && oldsec != m && oldsec != m + 1 && oldsec != sh && oldsec != sh + 1)
-      strip.setPixelColor(oldsec, strip.Color(BACKGND));
-    strip.show();
+
+    strip.setPixelColor(ms, strip.Color(BACKGND));     // Set the ms to the background color
+    strip.setPixelColor(sh, strip.Color(OLD_H_COLOR)); // Set the old hour color
+    strip.setPixelColor(sh + 1, strip.Color(H_COLOR)); // Set the hour color
+    if (m == sh || m == sh + 1) strip.setPixelColor(m, strip.Color(MH_COLOR)); // Set the minute and hour combined color
+    strip.setPixelColor(m, strip.Color(OLD_M_COLOR));  // Set the old minute color
+    strip.setPixelColor(m + 1, strip.Color(M_COLOR));  // Set the minute color
+    strip.setPixelColor(s, strip.Color(S_COLOR));      // Set the second color
+    strip.setPixelColor(oldsec, strip.Color(BACKGND)); // Set the old second to the background color
+
+    strip.show();  // Set the LEDs
     ESP.wdtFeed(); // Keep the watchdogs happy
   }
 }
 
 void hourchime(uint8_t wait) {
   Serial.print("Hour Chimes.. ");
-  int chmhr;
+  uint8_t chmhr;
   if (hr == 0) chmhr = 12;
     else chmhr = hr;
-  for (int m = 1; m <= chmhr; m ++) {
+  for (uint8_t m = 1; m <= chmhr; m ++) {
     if (m > 1) Serial.print(" - ");
     Serial.print(m);
     for(uint16_t i = 0; i <= NUMPIXELS - 1; i ++) {
@@ -506,22 +504,24 @@ void sendNTPpacket(IPAddress &address) {
 }
 
 void FadeonBackgnd(uint8_t wait) {
-  for(int j = 0; j < backgnd_white; j ++) {
-    for(uint16_t i = 0; i < strip.numPixels(); i ++)
-        strip.setPixelColor(i, strip.Color(neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]));
-    delay(wait);
+  for(uint8_t j = 0; j < backgnd_white; j ++) {
+    for(uint16_t i = 0; i < strip.numPixels(); i ++) {
+      strip.setPixelColor(i, strip.Color(BACKGND));
+    }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
+    delay(wait);
   }
 }
 
 void FadeoffBackgnd(uint8_t wait) {
-  for(int j = backgnd_white; j >= 0; j --) {
-    for(uint16_t i = 0; i < strip.numPixels(); i ++)
-        strip.setPixelColor(i, strip.Color(neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]));
-    delay(wait);
+  for(uint8_t j = backgnd_white; j >= 0; j --) {
+    for(uint16_t i = 0; i < strip.numPixels(); i ++) {
+      strip.setPixelColor(i, strip.Color(BACKGND));
+    }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
+    delay(wait);
   }
 }
 
