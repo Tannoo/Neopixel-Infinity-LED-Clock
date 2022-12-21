@@ -196,7 +196,11 @@ void setup(void) {
   old_hr = hr; oldmin = m; oldsec = s;
 
   delay(500);
-  hourchime(5);
+  if (m == 0) hourchime(5);
+  else {
+    backgnd_white = random(0, 127);
+    FadeonBackgnd(5);    
+  }
 }
 
 void loop() {
