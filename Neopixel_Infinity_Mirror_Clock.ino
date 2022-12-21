@@ -73,17 +73,20 @@ byte neopix_gamma[] = {
   s  = Base second
   ms = Base millisecond
 */
-uint8_t  h, sh, hr, old_hr, m, sm, old_sm, s, ms, oldhr, oldmin, oldsec;
-uint8_t backgnd_white, backgnd_fade, old_backgnd_fade;
+uint8_t ms, s, m, mf, h, hf, sh, hr;
+uint8_t oldsec, old_mf, oldmin, old_hf, old_hr, oldhr;
+uint8_t backgnd_white, m_backgnd_fade, h_backgnd_fade;
+uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
 
-#define H_COLOR                   255,             0,                0
-#define SM_COLOR         backgnd_fade,            sm,     backgnd_fade
-#define OLD_SM_COLOR old_backgnd_fade,        old_sm, old_backgnd_fade
-#define MH_COLOR                  255,           255,                0
-#define S_COLOR                     0,             0,              255
-#define MS_COLOR        backgnd_white,           255,              255
-#define BACKGND         backgnd_white, backgnd_white,    backgnd_white
-#define ALL_WHITE                 255,           255,              255
+#define H_COLOR                    hf,    h_backgnd_fade,    h_backgnd_fade
+#define OLD_H_COLOR            old_hf, oldh_backgnd_fade, oldh_backgnd_fade
+#define M_COLOR        m_backgnd_fade,                mf,    m_backgnd_fade
+#define OLD_M_COLOR oldm_backgnd_fade,            old_mf, oldm_backgnd_fade
+#define MH_COLOR                  255,               255,                 0
+#define S_COLOR                     0,                 0,               255
+#define MS_COLOR        backgnd_white,               255,               255
+#define BACKGND         backgnd_white,     backgnd_white,     backgnd_white
+#define ALL_WHITE                 255,               255,               255
 
 // NTP Servers:
 IPAddress timeServer;
@@ -229,23 +232,31 @@ void loop() {
 
   // **** Time ****
 
-  // Map and set the sweeping minute color fading.
-  sm = map(s, 0, NUMPIXELS - 1, backgnd_white, 255);
-  old_sm = map(s, 0, NUMPIXELS - 1, 255, backgnd_white);
+  // Map and set the fading minute color.
+  mf = map(s, 0, NUMPIXELS - 1, backgnd_white, 255);
+  old_mf = map(s, 0, NUMPIXELS - 1, 255, backgnd_white);
 
-  backgnd_fade = map(s, 0, NUMPIXELS - 1, backgnd_white, 0);
-  old_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, backgnd_white);
+  m_backgnd_fade = map(s, 0, NUMPIXELS - 1, backgnd_white, 0);
+  oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, backgnd_white);
 
-  // Map and set the sweeping hour LED position. (Fading to come later)
-  sh = map(m, 0, 59, h, h + 4);
+  // Map and set the fading hour color.
+  hf = map(m, 0, NUMPIXELS - 1, backgnd_white, 255);
+  old_hf = map(m, 0, NUMPIXELS - 1, 255, backgnd_white);
+
+  h_backgnd_fade = map(m, 0, NUMPIXELS - 1, backgnd_white, 0);
+  oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, backgnd_white);
+
+  // Map and set the hour LED position.
+  sh = map(m, 0, NUMPIXELS - 1, h, h + 4);
 
   for (ms = 0; ms <= NUMPIXELS - 1; ms ++) {
     if (ms == sh && oldhr != sh) strip.setPixelColor(ms, strip.Color(H_COLOR));
     else if (ms == sh) strip.setPixelColor(ms, strip.Color(H_COLOR));
+    else if (ms == sh + 1) strip.setPixelColor(ms, strip.Color(H_COLOR));
 
-    else if (ms == m && m != oldmin) strip.setPixelColor(ms, strip.Color(OLD_SM_COLOR));
-    else if (ms == m) strip.setPixelColor(ms, strip.Color(SM_COLOR));
-    else if (ms == m + 1) strip.setPixelColor(ms, strip.Color(SM_COLOR));
+    else if (ms == m && m != oldmin) strip.setPixelColor(ms, strip.Color(OLD_M_COLOR));
+    else if (ms == m) strip.setPixelColor(ms, strip.Color(M_COLOR));
+    else if (ms == m + 1) strip.setPixelColor(ms, strip.Color(M_COLOR));
 
     else if (ms == s && s != oldsec) strip.setPixelColor(ms, strip.Color(S_COLOR));
     else if (ms == s) strip.setPixelColor(ms, strip.Color(S_COLOR));
@@ -256,20 +267,21 @@ void loop() {
 
     delay(718 / NUMPIXELS); // Change the ms delay for secs to match the LEDs.
     strip.setPixelColor(ms, strip.Color(BACKGND));
-    strip.setPixelColor(sh, strip.Color(H_COLOR));
+    strip.setPixelColor(sh, strip.Color(OLD_H_COLOR));
+    strip.setPixelColor(sh + 1, strip.Color(H_COLOR));
     if (oldhr != sh)
       strip.setPixelColor(oldhr, strip.Color(BACKGND));
     if (m == sh)
       strip.setPixelColor(m, strip.Color(MH_COLOR));
     else
-      strip.setPixelColor(m, strip.Color(OLD_SM_COLOR));
-      strip.setPixelColor(m + 1, strip.Color(SM_COLOR));
+      strip.setPixelColor(m, strip.Color(OLD_M_COLOR));
+      strip.setPixelColor(m + 1, strip.Color(M_COLOR));
     if (oldmin != m && oldmin != sh)
       strip.setPixelColor(oldmin, strip.Color(BACKGND));
     if (s == 0 && oldsec != sh && oldsec != m && !ms != sh && ms != m && sh != NUMPIXELS - 1 && m != NUMPIXELS - 1)
       strip.setPixelColor(NUMPIXELS - 1, strip.Color(BACKGND));
     strip.setPixelColor(s, strip.Color(S_COLOR));
-    if (oldsec != s && oldsec != sh && oldsec != m && oldsec != m + 1)
+    if (oldsec != s && oldsec != m && oldsec != m + 1 && oldsec != sh && oldsec != sh + 1)
       strip.setPixelColor(oldsec, strip.Color(BACKGND));
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
