@@ -8,8 +8,8 @@
 #include <ESP8266WiFi.h>     // For WiFi
 #include <WiFiUdp.h>         // For UDP NTP
 unsigned long NTPreqnum = 0; // For NTP
-char ssid[] = "WTanno";
-char pass[] = "tannothegreat!";
+char ssid[] = "********";
+char pass[] = "********";
 
 // >>>>>>> OTA STUFF <<<<<<<
 // *************************
