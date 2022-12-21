@@ -73,16 +73,17 @@ byte neopix_gamma[] = {
   s  = Base second
   ms = Base millisecond
 */
-uint8_t  h, sh, hr, old_hr, m, s, ms, oldhr, oldmin, oldsec;
-uint8_t backgnd_white;
+uint8_t  h, sh, hr, old_hr, m, sm, old_sm, s, ms, oldhr, oldmin, oldsec;
+uint8_t backgnd_white, backgnd_fade, old_backgnd_fade;
 
-#define H_COLOR      255,   0,   0
-#define M_COLOR        0, 255,   0
-#define MH_COLOR     255, 255,   0
-#define S_COLOR        0,   0, 255
-#define MS_COLOR   backgnd_white, 255, 255
-#define BACKGND    backgnd_white, backgnd_white, backgnd_white
-#define ALL_WHITE  255, 255, 255
+#define H_COLOR                   255,             0,                0
+#define SM_COLOR         backgnd_fade,            sm,     backgnd_fade
+#define OLD_SM_COLOR old_backgnd_fade,        old_sm, old_backgnd_fade
+#define MH_COLOR                  255,           255,                0
+#define S_COLOR                     0,             0,              255
+#define MS_COLOR        backgnd_white,           255,              255
+#define BACKGND         backgnd_white, backgnd_white,    backgnd_white
+#define ALL_WHITE                 255,           255,              255
 
 // NTP Servers:
 IPAddress timeServer;
@@ -205,13 +206,6 @@ void loop() {
   m = now.minute();
   s = now.second(); 
 
-  // Calculate and set the sweeping hour LED position.
-  if (m <= 11) sh = h;
-  if ((m >= 12) && (m <= 23)) sh = h + 1;
-  if ((m >= 24) && (m <= 35)) sh = h + 2;
-  if ((m >= 36) && (m <= 47)) sh = h + 3;
-  if (m >= 48) sh = h + 4;
-
   // Chime
   if (old_hr != sh && m == 0) {
     ESP.wdtFeed(); // Keep the watchdogs happy
@@ -233,13 +227,25 @@ void loop() {
     digitalClockDisplay();
   }
 
-  // Time
+  // **** Time ****
+
+  // Map and set the sweeping minute color fading.
+  sm = map(s, 0, NUMPIXELS - 1, backgnd_white, 255);
+  old_sm = map(s, 0, NUMPIXELS - 1, 255, backgnd_white);
+
+  backgnd_fade = map(s, 0, NUMPIXELS - 1, backgnd_white, 0);
+  old_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, backgnd_white);
+
+  // Map and set the sweeping hour LED position. (Fading to come later)
+  sh = map(m, 0, 59, h, h + 4);
+
   for (ms = 0; ms <= NUMPIXELS - 1; ms ++) {
     if (ms == sh && oldhr != sh) strip.setPixelColor(ms, strip.Color(H_COLOR));
     else if (ms == sh) strip.setPixelColor(ms, strip.Color(H_COLOR));
 
-    else if (ms == m && m != oldmin) strip.setPixelColor(ms, strip.Color(M_COLOR));
-    else if (ms == m) strip.setPixelColor(ms, strip.Color(M_COLOR));
+    else if (ms == m && m != oldmin) strip.setPixelColor(ms, strip.Color(OLD_SM_COLOR));
+    else if (ms == m) strip.setPixelColor(ms, strip.Color(SM_COLOR));
+    else if (ms == m + 1) strip.setPixelColor(ms, strip.Color(SM_COLOR));
 
     else if (ms == s && s != oldsec) strip.setPixelColor(ms, strip.Color(S_COLOR));
     else if (ms == s) strip.setPixelColor(ms, strip.Color(S_COLOR));
@@ -248,7 +254,7 @@ void loop() {
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
 
-    delay(717 / NUMPIXELS); // Change the ms delay for secs to match the LEDs.
+    delay(718 / NUMPIXELS); // Change the ms delay for secs to match the LEDs.
     strip.setPixelColor(ms, strip.Color(BACKGND));
     strip.setPixelColor(sh, strip.Color(H_COLOR));
     if (oldhr != sh)
@@ -256,13 +262,14 @@ void loop() {
     if (m == sh)
       strip.setPixelColor(m, strip.Color(MH_COLOR));
     else
-      strip.setPixelColor(m, strip.Color(M_COLOR));
+      strip.setPixelColor(m, strip.Color(OLD_SM_COLOR));
+      strip.setPixelColor(m + 1, strip.Color(SM_COLOR));
     if (oldmin != m && oldmin != sh)
       strip.setPixelColor(oldmin, strip.Color(BACKGND));
     if (s == 0 && oldsec != sh && oldsec != m && !ms != sh && ms != m && sh != NUMPIXELS - 1 && m != NUMPIXELS - 1)
       strip.setPixelColor(NUMPIXELS - 1, strip.Color(BACKGND));
     strip.setPixelColor(s, strip.Color(S_COLOR));
-    if (oldsec != s && oldsec != sh && oldsec != m)
+    if (oldsec != s && oldsec != sh && oldsec != m && oldsec != m + 1)
       strip.setPixelColor(oldsec, strip.Color(BACKGND));
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
@@ -425,7 +432,6 @@ void setDST(bool check) {
     if (month() > 11 && month() < 3) DST = false;
     if (month() < 11 && month() > 3) DST = true;
   }
-
   if (DST == true && hr != hourFormat12() + 1)  hr = hourFormat12() + 1;
   if (DST == false && hr != hourFormat12()) hr = hourFormat12();
 }
