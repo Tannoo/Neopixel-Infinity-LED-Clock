@@ -8,8 +8,8 @@
 #include <ESP8266WiFi.h>     // For WiFi
 #include <WiFiUdp.h>         // For UDP NTP
 unsigned long NTPreqnum = 0; // For NTP
-char ssid[] = "********";
-char pass[] = "********";
+char ssid[] = "WTanno";
+char pass[] = "tannothegreat!";
 
 // >>>>>>> OTA STUFF <<<<<<<
 // *************************
@@ -154,6 +154,7 @@ void setup(void) {
   // *******************************
   Wire.begin(); // Start the I2C
   RTC.begin();  // Init RTC
+  
   // Time and date is expanded to date and time on your computer at compile time
   RTC.adjust(DateTime(__DATE__, __TIME__));
   Serial.print("Time and date set");
@@ -272,6 +273,7 @@ void loop() {
     ESP.wdtFeed(); // Keep the watchdogs happy
     delay(718 / NUMPIXELS); // Change the ms delay for secs to match the LEDs.
 
+    // Setting the LED and background colors after a specific delay
     strip.setPixelColor(ms, strip.Color(BACKGND));     // Set the ms to the background color
     strip.setPixelColor(sh, strip.Color(OLD_H_COLOR)); // Set the old hour color
     strip.setPixelColor(sh + 1, strip.Color(H_COLOR)); // Set the hour color
@@ -546,7 +548,7 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
       if(millis() - lastTime > whiteSpeed) {
         head ++;
         tail ++;
-        if(head == strip.numPixels()){
+        if(head == strip.numPixels()) {
           loopNum ++;
         }
         lastTime = millis();
