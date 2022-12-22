@@ -2,12 +2,18 @@
  *  Neopixel - OTA - NTP - RTC - Infinity Clock
  */
 
+// http://arduino.esp8266.com/stable/package_esp8266com_index.json
+
 // >>>>>>> WIFI & UDP <<<<<<<
 // **************************
+// Time by Michael Margolis v1.6.1
 #include <TimeLib.h>         // For Date/Time operations
+// ESP8266WiFi library -- unknown source
 #include <ESP8266WiFi.h>     // For WiFi
 #include <WiFiUdp.h>         // For UDP NTP
+
 unsigned long NTPreqnum = 0; // For NTP
+
 char ssid[] = "********";
 char pass[] = "********";
 
@@ -200,7 +206,7 @@ void setup(void) {
   if (m == 0) hourchime(5);
   else {
     backgnd_white = random(0, 127);
-    FadeonBackgnd(5);    
+    FadeonBackgnd(10);    
   }
 }
 
@@ -215,14 +221,14 @@ void loop() {
   s = now.second(); 
 
   // Chime
-  if (old_hr != hr && m == 0) {
+  if (old_hr != h && m == 0) {
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeoffBackgnd(5);
     delay(200);
     setDST(true);
     hourchime(3);
     backgnd_white = random(0, 127);
-    old_hr = hr;
+    old_hr = h;
   }
 
   // digital clock display of the time
@@ -264,7 +270,8 @@ void loop() {
     strip.setPixelColor(ms, strip.Color(MS_COLOR));    // Set the millisecond color
     strip.setPixelColor(sh + 1, strip.Color(H_COLOR)); // Set hour color
     strip.setPixelColor(sh, strip.Color(OLD_H_COLOR)); // Set the old hour color
-    if (m == sh || m == sh + 1) strip.setPixelColor(m, strip.Color(MH_COLOR)); // Set the minute and hour combined color
+    if (m == sh || m == sh + 1 || m + 1 == sh || m + 1 == sh + 1)
+      strip.setPixelColor(m, strip.Color(MH_COLOR)); // Set the minute and hour combined color
     strip.setPixelColor(m + 1, strip.Color(M_COLOR));  // Set the minute color
     strip.setPixelColor(m, strip.Color(OLD_M_COLOR));  // Set the old minute color
     strip.setPixelColor(s, strip.Color(S_COLOR));      // Set the second color
@@ -277,7 +284,8 @@ void loop() {
     strip.setPixelColor(ms, strip.Color(BACKGND));     // Set the ms to the background color
     strip.setPixelColor(sh, strip.Color(OLD_H_COLOR)); // Set the old hour color
     strip.setPixelColor(sh + 1, strip.Color(H_COLOR)); // Set the hour color
-    if (m == sh || m == sh + 1) strip.setPixelColor(m, strip.Color(MH_COLOR)); // Set the minute and hour combined color
+    if (m == sh || m == sh + 1 || m + 1 == sh || m + 1 == sh + 1)
+      strip.setPixelColor(m, strip.Color(MH_COLOR)); // Set the minute and hour combined color
     strip.setPixelColor(m, strip.Color(OLD_M_COLOR));  // Set the old minute color
     strip.setPixelColor(m + 1, strip.Color(M_COLOR));  // Set the minute color
     strip.setPixelColor(s, strip.Color(S_COLOR));      // Set the second color
