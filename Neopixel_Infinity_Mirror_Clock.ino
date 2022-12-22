@@ -205,8 +205,8 @@ void setup(void) {
   delay(500);
   if (m == 0) hourchime(5);
   else {
-    backgnd_white = random(0, 127);
-    FadeonBackgnd(10);    
+    backgnd_white = random(0, 100);
+    FadeonBackgnd(50);    
   }
 }
 
@@ -301,40 +301,41 @@ void hourchime(uint8_t wait) {
   uint8_t chmhr;
   if (hr == 0) chmhr = 12;
     else chmhr = hr;
-  for (uint8_t m = 1; m <= chmhr; m ++) {
-    if (m > 1) Serial.print(" - ");
-    Serial.print(m);
-    for(uint16_t i = 0; i <= NUMPIXELS - 1; i ++) {
-      if (m == 1)  strip.setPixelColor(i, strip.Color(255, 0, 0));
-      if (m == 2)  strip.setPixelColor(i, strip.Color(255, 0, 0, 255));
-      if (m == 3)  strip.setPixelColor(i, strip.Color(255, 255, 0));
-      if (m == 4)  strip.setPixelColor(i, strip.Color(0, 255, 0));
-      if (m == 5)  strip.setPixelColor(i, strip.Color(0, 255, 0, 255));
-      if (m == 6)  strip.setPixelColor(i, strip.Color(0, 255, 255));
-      if (m == 7)  strip.setPixelColor(i, strip.Color(0, 0, 255));
-      if (m == 8)  strip.setPixelColor(i, strip.Color(0, 0, 255, 255));
-      if (m == 9)  strip.setPixelColor(i, strip.Color(255, 0, 255));
-      if (m == 10) strip.setPixelColor(i, strip.Color(ALL_WHITE));
-      if (m == 11) strip.setPixelColor(i, strip.Color(255, 0, 255, 255));
-      if (m == 12) strip.setPixelColor(i, strip.Color(0, 255, 255, 255));
+  for (uint8_t n = 1; n <= chmhr; n ++) {
+    if (n > 1) Serial.print(" - ");
+    Serial.print(n);
+    uint8_t j = 255;
+    for(uint8_t i = 0; i <= NUMPIXELS - 1; i ++) {
+      if (n == 1)  strip.setPixelColor(i, strip.Color(CHCOLOR1));
+      if (n == 2)  strip.setPixelColor(i, strip.Color(CHCOLOR2));
+      if (n == 3)  strip.setPixelColor(i, strip.Color(CHCOLOR3));
+      if (n == 4)  strip.setPixelColor(i, strip.Color(CHCOLOR4));
+      if (n == 5)  strip.setPixelColor(i, strip.Color(CHCOLOR5));
+      if (n == 6)  strip.setPixelColor(i, strip.Color(CHCOLOR6));
+      if (n == 7)  strip.setPixelColor(i, strip.Color(CHCOLOR7));
+      if (n == 8)  strip.setPixelColor(i, strip.Color(CHCOLOR8));
+      if (n == 9)  strip.setPixelColor(i, strip.Color(CHCOLOR9));
+      if (n == 10) strip.setPixelColor(i, strip.Color(CHCOLOR10));
+      if (n == 11) strip.setPixelColor(i, strip.Color(CHCOLOR11));
+      if (n == 12) strip.setPixelColor(i, strip.Color(CHCOLOR12));
     }
     strip.show();
     delay(wait);
     ESP.wdtFeed(); // Keep the watchdogs happy
-    for(int j = 255; j >= 0; j--) {
-      for(uint16_t i = 0; i <= NUMPIXELS - 1; i ++) {
-        if (m == 1)  strip.setPixelColor(i, strip.Color(CHCOLOR1));
-        if (m == 2)  strip.setPixelColor(i, strip.Color(CHCOLOR2));
-        if (m == 3)  strip.setPixelColor(i, strip.Color(CHCOLOR3));
-        if (m == 4)  strip.setPixelColor(i, strip.Color(CHCOLOR4));
-        if (m == 5)  strip.setPixelColor(i, strip.Color(CHCOLOR5));
-        if (m == 6)  strip.setPixelColor(i, strip.Color(CHCOLOR6));
-        if (m == 7)  strip.setPixelColor(i, strip.Color(CHCOLOR7));
-        if (m == 8)  strip.setPixelColor(i, strip.Color(CHCOLOR8));
-        if (m == 9)  strip.setPixelColor(i, strip.Color(CHCOLOR9));
-        if (m == 10) strip.setPixelColor(i, strip.Color(CHCOLOR10));
-        if (m == 11) strip.setPixelColor(i, strip.Color(CHCOLOR11));
-        if (m == 12) strip.setPixelColor(i, strip.Color(CHCOLOR12));
+    for(uint8_t j = 255; j >= 0; j--) {
+      for(uint8_t i = 0; i <= NUMPIXELS - 1; i ++) {
+        if (n == 1)  strip.setPixelColor(i, strip.Color(CHCOLOR1));
+        if (n == 2)  strip.setPixelColor(i, strip.Color(CHCOLOR2));
+        if (n == 3)  strip.setPixelColor(i, strip.Color(CHCOLOR3));
+        if (n == 4)  strip.setPixelColor(i, strip.Color(CHCOLOR4));
+        if (n == 5)  strip.setPixelColor(i, strip.Color(CHCOLOR5));
+        if (n == 6)  strip.setPixelColor(i, strip.Color(CHCOLOR6));
+        if (n == 7)  strip.setPixelColor(i, strip.Color(CHCOLOR7));
+        if (n == 8)  strip.setPixelColor(i, strip.Color(CHCOLOR8));
+        if (n == 9)  strip.setPixelColor(i, strip.Color(CHCOLOR9));
+        if (n == 10) strip.setPixelColor(i, strip.Color(CHCOLOR10));
+        if (n == 11) strip.setPixelColor(i, strip.Color(CHCOLOR11));
+        if (n == 12) strip.setPixelColor(i, strip.Color(CHCOLOR12));
       }
       delay(wait);
       strip.show();
@@ -343,7 +344,7 @@ void hourchime(uint8_t wait) {
   }
   Serial.println();
   Serial.println("Fading on the background...");
-  FadeonBackgnd(5);
+  FadeonBackgnd(50);
   Serial.println();
   Serial.println("Running the clock...");
   Serial.println();
@@ -515,8 +516,8 @@ void sendNTPpacket(IPAddress &address) {
 
 void FadeonBackgnd(uint8_t wait) {
   for(uint8_t j = 0; j < backgnd_white; j ++) {
-    for(uint16_t i = 0; i < strip.numPixels(); i ++) {
-      strip.setPixelColor(i, strip.Color(BACKGND));
+    for(uint8_t i = 0; i < strip.numPixels(); i ++) {
+      strip.setPixelColor(i, strip.Color(j, j, j));
     }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
@@ -526,8 +527,8 @@ void FadeonBackgnd(uint8_t wait) {
 
 void FadeoffBackgnd(uint8_t wait) {
   for(uint8_t j = backgnd_white; j >= 0; j --) {
-    for(uint16_t i = 0; i < strip.numPixels(); i ++) {
-      strip.setPixelColor(i, strip.Color(BACKGND));
+    for(uint8_t i = 0; i < strip.numPixels(); i ++) {
+      strip.setPixelColor(i, strip.Color(j, j, j));
     }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
@@ -545,7 +546,7 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
 
   while(true) {
     for(uint8_t j = 0; j < 256; j ++) {
-      for(uint16_t i = 0; i < strip.numPixels(); i ++) {
+      for(uint8_t i = 0; i < strip.numPixels(); i ++) {
         if((i >= tail && i <= head) || (tail > head && i >= tail) || (tail > head && i <= head)) {
           strip.setPixelColor(i, strip.Color(ALL_WHITE));
         }
