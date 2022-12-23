@@ -22,8 +22,6 @@ char pass[] = "********";
 
 // >>>>>>> RTC STUFF <<<<<<<
 // *************************
-#include <Wire.h>   // Library for I2C communication
-#include <SPI.h>    // Not used here, but needed to prevent a RTClib compile error
 #include <RTClib.h> // Library for RTC stuff
 
 RTC_DS1307 RTC;     // Setup an instance of DS1307 naming it RTC
@@ -223,7 +221,7 @@ void loop() {
   s = now.second(); 
 
   // Chime
-  if (old_hr != hr && m == 0) {
+  if (old_hr != h && m == 0) {
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeoffBackgnd(5);
     delay(200);
@@ -261,6 +259,7 @@ void loop() {
   hf = map(m, 0, NUMPIXELS - 1, backgnd_white, 255);
   old_hf = map(m, 0, NUMPIXELS - 1, 255, backgnd_white);
 
+  // Map and fade the hour backgroud intensities
   h_backgnd_fade = map(m, 0, NUMPIXELS - 1, backgnd_white, 0);
   oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, backgnd_white);
 
@@ -370,10 +369,21 @@ void digitalClockDisplay() {
     }
   Serial.print(':');
   if (now.minute() < 10) Serial.print(F("0"));
-    Serial.print(now.minute(), DEC);
+  Serial.print(now.minute(), DEC);
   Serial.print(':');
   if (now.second() < 10) Serial.print(F("0"));
-    Serial.print(now.second(), DEC);
+  Serial.print(now.second(), DEC);
+  Serial.println();
+
+  // Clock LED Time  
+  Serial.print(F("Clock LED Time: "));
+  Serial.print(h);
+  Serial.print(':');
+  if (m < 10) Serial.print(F("0"));
+  Serial.print(m);
+  Serial.print(':');
+  if (s < 10) Serial.print(F("0"));
+  Serial.print(s);
   Serial.println();
 
   // Date and Time from NTP
