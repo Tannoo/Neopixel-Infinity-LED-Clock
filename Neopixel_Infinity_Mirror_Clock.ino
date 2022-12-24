@@ -26,8 +26,9 @@ float temperature_K = 10;
 float temperature_F = 10;
 float max_temp_today;
 float min_temp_today;
-uint8_t B_lue; // Background Blue
-uint8_t R_ed;  // Background Red
+uint8_t R_ed;   // Background Red
+uint8_t G_reen; // Background Green
+uint8_t B_lue;  // Background Blue
 
 // Register for a key @ https://openweathermap.org/api
 String openWeatherMapApiKey = "*****************************";
@@ -109,7 +110,7 @@ uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
 #define MH_COLOR                   hf,                mf,                 0
 #define S_COLOR                     0,                 0,               255
 #define MS_COLOR                 R_ed,               255,               255
-#define BACKGND                  R_ed,                 0,             B_lue
+#define BACKGND                  R_ed,            G_reen,             B_lue
 #define ALL_WHITE                 255,               255,               255
 
 // NTP Servers:
@@ -659,6 +660,9 @@ void weather() {
           // Now scale the temp to the red and blue colors
           R_ed  = map(temperature_F, 0, 100,   0, 100);
           B_lue = map(temperature_F, 0, 100, 100,   0);
+          // Let's lighten up things if there is a good temp.
+          if (temperature_K >= 50) G_reen = backgnd_white;
+          else G_reen = 0;
 
           Serial.print(F("Temperature: "));
           Serial.print(temperature_K);
@@ -668,6 +672,9 @@ void weather() {
           Serial.print(F("F | "));
           Serial.print(F("Red value: "));
           Serial.print(R_ed);
+          Serial.print(F(" | "));
+          Serial.print(F("Green value: "));
+          Serial.print(G_reen);
           Serial.print(F(" | "));
           Serial.print(F("Blue value: "));
           Serial.println(B_lue);
