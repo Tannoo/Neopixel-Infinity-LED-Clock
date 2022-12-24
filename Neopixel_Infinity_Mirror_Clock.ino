@@ -255,14 +255,13 @@ void loop() {
     old_hr = hr;
   }
 
-  // digital clock display of the time
-  unsigned long currentMillis = millis();
-
+  // Clock time interval
   if ((millis() - previousMillis) >= timeUpdate) {
-    previousMillis = currentMillis;
+    previousMillis = millis();
     digitalClockDisplay();
   }
 
+  // Weather time interval
   if ((millis() - lastTime) > weatherDelay) {   
     lastTime = millis();
     weather();        
