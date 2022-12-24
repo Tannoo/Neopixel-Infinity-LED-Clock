@@ -701,6 +701,7 @@ String httpGETRequest(const char* serverName) {
    else {
      Serial.print(F("Error code: "));
      Serial.println(httpResponseCode);
+     temperature_K = 10; // Set the K temp back to default if no connection was made.
    }
    http.end(); // free resources
    return payload;
