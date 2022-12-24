@@ -12,8 +12,28 @@
 
 unsigned long NTPreqnum = 0; // For NTP
 
-char ssid[] = "********";
-char pass[] = "********";
+char ssid[] = "********"; // WiFi name
+char pass[] = "********"; // WiFi password
+
+// >>>>>>> WEATHER STUFF <<<<<<<
+// *****************************
+#include <WiFiClient.h>
+#include <ESP8266HTTPClient.h>
+#include <Arduino_JSON.h>
+unsigned long lastTime = 0;
+unsigned long weatherDelay = 600000;
+float temperature_K = 10;
+float temperature_F = 10;
+float max_temp_today;
+float min_temp_today;
+uint8_t B_lue; // Background Blue
+uint8_t R_ed;  // Background Red
+
+// Register for a key @ https://openweathermap.org/api
+String openWeatherMapApiKey = "*****************************";
+String city = "Longmont";
+String countryCode = "US";
+String jsonBuffer;
 
 // >>>>>>> OTA STUFF <<<<<<<
 // *************************
@@ -22,6 +42,8 @@ char pass[] = "********";
 
 // >>>>>>> RTC STUFF <<<<<<<
 // *************************
+//#include <Wire.h>   // Library for I2C communication
+//#include <SPI.h>    // Not used here, but needed to prevent a RTClib compile error
 #include <RTClib.h> // Library for RTC stuff
 
 RTC_DS1307 RTC;     // Setup an instance of DS1307 naming it RTC
@@ -86,8 +108,8 @@ uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
 #define OLD_M_COLOR oldm_backgnd_fade,            old_mf, oldm_backgnd_fade
 #define MH_COLOR                   hf,                mf,                 0
 #define S_COLOR                     0,                 0,               255
-#define MS_COLOR        backgnd_white,               255,               255
-#define BACKGND         backgnd_white,     backgnd_white,     backgnd_white
+#define MS_COLOR                 R_ed,               255,               255
+#define BACKGND                  R_ed,                 0,             B_lue
 #define ALL_WHITE                 255,               255,               255
 
 // NTP Servers:
@@ -99,7 +121,7 @@ bool DST;
 WiFiUDP Udp;
 uint8_t localPort = 8888;  // Local port to listen for UDP packets
 unsigned long previousMillis = 0;
-uint32_t timeUpdate = random(8000, 60000);
+uint32_t timeUpdate = 60000;
 
 void setup(void) {
   // Generate random seed
@@ -109,7 +131,8 @@ void setup(void) {
   }
   randomSeed( seed );  //set random seed
 
-  backgnd_white = random(0, 50); // Randomizing the background intensity to reduce monotony.
+  // Randomizing the background intensity until we have the weather reported temperature
+  backgnd_white = random(0, 50);
 
   Serial.begin(115200);
   Serial.println(F("Starting up..."));
@@ -182,6 +205,8 @@ void setup(void) {
 
   ESP.wdtDisable();
 
+  weather(); // Go check the weather
+
   // >>>>>>> Start Demo / Pixel test <<<<<<<
   // ***************************************
   strip.begin();
@@ -203,7 +228,6 @@ void setup(void) {
   delay(500);
   if (m == 0) hourchime(5);
   else {
-    backgnd_white = random(0, 100);
     FadeonBackgnd(20);    
   }
 }
@@ -221,23 +245,27 @@ void loop() {
   s = now.second(); 
 
   // Chime
-  if (old_hr != h && m == 0) {
+  if (old_hr != hr && m == 0) {
+    Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeoffBackgnd(5);
     delay(200);
     setDST(true);
     hourchime(3);
-    backgnd_white = random(0, 127);
-    old_hr = h;
+    old_hr = hr;
   }
 
   // digital clock display of the time
   unsigned long currentMillis = millis();
 
-  if (currentMillis - previousMillis >= timeUpdate) {
+  if ((millis() - previousMillis) >= timeUpdate) {
     previousMillis = currentMillis;
-    timeUpdate = 60000;
     digitalClockDisplay();
+  }
+
+  if ((millis() - lastTime) > weatherDelay) {   
+    lastTime = millis();
+    weather();        
   }
 
   // **************
@@ -341,10 +369,12 @@ void hourchime(uint8_t wait) {
     }
   }
   Serial.println();
-  Serial.println(F("Fading on the background..."));
+  Serial.println(F("Go fade on the background...(end of chime"));
+  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   FadeonBackgnd(20);
   Serial.println();
   Serial.println(F("Running the clock..."));
+  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   Serial.println();
 }
 
@@ -522,6 +552,7 @@ void sendNTPpacket(IPAddress &address) {
 
 void FadeonBackgnd(uint8_t wait) {
   Serial.println(F("Fading on the background..."));
+  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   for(int j = 0; j < backgnd_white; j ++) {
     for(uint16_t i = 0; i < strip.numPixels(); i ++) {
       strip.setPixelColor(i, strip.Color(j, j, j));
@@ -534,6 +565,7 @@ void FadeonBackgnd(uint8_t wait) {
 
 void FadeoffBackgnd(uint8_t wait) {
   Serial.println(F("Fading off the background..."));
+  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   for(int j = backgnd_white; j >= 0; j --) {
     for(uint16_t i = 0; i < strip.numPixels(); i ++) {
       strip.setPixelColor(i, strip.Color(j, j, j));
@@ -580,8 +612,8 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
   }
 }
 
-// Input a value 0 to 255 to get a color value.
-// The colours are a transition r - g - b - back to r.
+// Input a value 0 to 255 to get a color value
+// The colours are a transition r - g - b - back to r
 uint32_t Wheel(byte WheelPos) {
   WheelPos = 255 - WheelPos;
   if(WheelPos < 85) {
@@ -598,3 +630,72 @@ uint32_t Wheel(byte WheelPos) {
 uint8_t red(uint32_t c) { return (c >> 16); }
 uint8_t green(uint32_t c) { return (c >> 8); }
 uint8_t blue(uint32_t c) { return (c); }
+
+void weather() {
+          String serverPath = "http://api.openweathermap.org/data/2.5/weather?q=" + city + "," + countryCode + "&APPID=" + openWeatherMapApiKey;
+          ESP.wdtFeed(); // Keep the watchdogs happy
+          jsonBuffer = httpGETRequest(serverPath.c_str());
+          Serial.println(jsonBuffer);
+          JSONVar myObject = JSON.parse(jsonBuffer);
+               double temperature_K  = (myObject["main"]["temp"]);
+
+          if (JSON.typeof(myObject) == "undefined") // JSON.typeof(jsonVar) can be used to get the type of the var
+            {
+             Serial.println(F("Parsing input failed!"));
+             return;
+             }
+          ESP.wdtFeed(); // Keep the watchdogs happy
+          Serial.println(F("****************"));
+          Serial.print(F("JSON object = "));
+          Serial.println(myObject);
+          Serial.println(F("****************"));
+          Serial.println(F("extracted from JSON object:"));
+          Serial.print(F("temperature: "));
+          Serial.print(myObject["main"]["temp"]);
+          Serial.println(F(" *K"));
+
+          // Convert Kelvin temp to Ferenheiht
+          temperature_F = 1.8 * (temperature_K - 273) + 32; // F = 1.8*(K-273) + 32
+
+          // Now scale the temp to the red and blue colors
+          R_ed  = map(temperature_F, 0, 100,   0, 100);
+          B_lue = map(temperature_F, 0, 100, 100,   0);
+
+          Serial.print(F("Temperature: "));
+          Serial.print(temperature_K);
+          Serial.print(F("K | "));
+          Serial.print(F("Temperature: "));
+          Serial.print(temperature_F);
+          Serial.print(F("F | "));
+          Serial.print(F("Red value: "));
+          Serial.print(R_ed);
+          Serial.print(F(" | "));
+          Serial.print(F("Blue value: "));
+          Serial.println(B_lue);
+}
+
+// *************************
+//  http GET request module
+// *************************
+String httpGETRequest(const char* serverName) {         
+
+   WiFiClient client;
+   HTTPClient http;
+
+   http.begin(client, serverName); // your IP address with path or Domain name with URL path 
+
+   int httpResponseCode = http.GET(); // send HTTP POST request  
+   String payload = "{}";
+   ESP.wdtFeed(); // Keep the watchdogs happy
+   if (httpResponseCode>0) {
+    Serial.print(F("HTTP Response code: "));
+    Serial.println(httpResponseCode);
+    payload = http.getString();
+   }
+   else {
+     Serial.print(F("Error code: "));
+     Serial.println(httpResponseCode);
+   }
+   http.end(); // free resources
+   return payload;
+}
