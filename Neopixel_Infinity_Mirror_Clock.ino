@@ -255,7 +255,7 @@ void loop() {
     Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.print(s);
     Serial.print(F(" | old_hr: ")); Serial.println(old_hr);
     ESP.wdtFeed(); // Keep the watchdogs happy
-    FadeoffBackgnd(5);
+    FadeOffBackgnd(20);
     delay(200);
     setDST(true);
     hourchime(3);
@@ -562,16 +562,13 @@ void sendNTPpacket(IPAddress &address) {
 void FadeonBackgnd(uint8_t wait) {
   Serial.println(F("Fading on the background..."));
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+  uint8_t Rnew, Gnew, Bnew;
   for(int j = 0; j < backgnd_white; j ++) {
-    for(uint16_t i = 0; i < strip.numPixels(); i ++) {
-      strip.setPixelColor(i, strip.Color(R_ed, G_reen, B_lue));
-
-    //for(int i = 0; i < n; i++) { // larger values of 'n' will give a smoother/slower transition.
-    //  Rnew = Rstart + (Rend - Rstart) * i / n;
-    //  Gnew = Gstart + (Gend - Gstart) * i / n;
-    //  Bnew = Bstart + (Bend - Bstart) * i / n;
-    //  strip.setPixelColor(0, strip.Color(Rnew, Gnew, Bnew));
-    //}
+    for(uint16_t i = 0; i < NUMPIXELS; i ++) {
+      Rnew = 0 + (R_ed   - 0) * j / backgnd_white;
+      Gnew = 0 + (G_reen - 0) * j / backgnd_white;
+      Bnew = 0 + (B_lue  - 0) * j / backgnd_white;
+      strip.setPixelColor(i, strip.Color(Rnew, Gnew, Bnew));
     }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
@@ -579,12 +576,16 @@ void FadeonBackgnd(uint8_t wait) {
   }
 }
 
-void FadeoffBackgnd(uint8_t wait) {
+void FadeOffBackgnd(uint8_t wait) {
   Serial.println(F("Fading off the background..."));
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+  uint8_t Rnew, Gnew, Bnew;
   for(int j = backgnd_white; j >= 0; j --) {
-    for(uint16_t i = 0; i < strip.numPixels(); i ++) {
-      strip.setPixelColor(i, strip.Color(j, j, j));
+    for(uint16_t i = 0; i < NUMPIXELS; i ++) {
+      Rnew = R_ed   + (0 - R_ed)   * j / backgnd_white;
+      Gnew = G_reen + (0 - G_reen) * j / backgnd_white;
+      Bnew = B_lue  + (0 - B_lue)  * j / backgnd_white;
+      strip.setPixelColor(i, strip.Color(Rnew, Gnew, Bnew));
     }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
@@ -593,7 +594,7 @@ void FadeoffBackgnd(uint8_t wait) {
 }
 
 void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
-  if(whiteLength >= strip.numPixels()) whiteLength = strip.numPixels() - 1;
+  if(whiteLength >= NUMPIXELS) whiteLength = NUMPIXELS - 1;
   uint8_t head = whiteLength - 1;
   uint8_t tail = 0;
   uint8_t loops = 3;
@@ -602,25 +603,25 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
 
   while(true) {
     for(uint8_t j = 0; j < 256; j ++) {
-      for(uint16_t i = 0; i < strip.numPixels(); i ++) {
+      for(uint16_t i = 0; i < NUMPIXELS; i ++) {
         if((i >= tail && i <= head) || (tail > head && i >= tail) || (tail > head && i <= head)) {
           strip.setPixelColor(i, strip.Color(ALL_WHITE));
         }
         else {
-          strip.setPixelColor(i, Wheel(((i * 256 / strip.numPixels()) + j) & 255));
+          strip.setPixelColor(i, Wheel(((i * 256 / NUMPIXELS) + j) & 255));
         }
       }
       if(millis() - lastTime > whiteSpeed) {
         head ++;
         tail ++;
-        if(head == strip.numPixels()) {
+        if(head == NUMPIXELS) {
           loopNum ++;
         }
         lastTime = millis();
       }
       if(loopNum == loops) return;
-      head %= strip.numPixels();
-      tail %= strip.numPixels();
+      head %= NUMPIXELS;
+      tail %= NUMPIXELS;
       strip.show();
       ESP.wdtFeed(); // Keep the watchdogs happy
       delay(wait);
