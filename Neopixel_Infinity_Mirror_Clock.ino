@@ -674,11 +674,11 @@ void weather() {
           temperature_F = 1.8 * (temperature_K - 273) + 32; // F = 1.8*(K-273) + 32
 
           // Now scale the temp to the red and blue colors
-          R_ed  = map(temperature_F, 0, 100,   0, 100);
-          B_lue = map(temperature_F, 0, 100, 100,   0);
+          R_ed  = map(temperature_F, 0, 100,   0, 70);
+          B_lue = map(temperature_F, 0, 100, 70,   0);
           // Let's lighten up things if there is a good temp.
           if (temperature_K >= 50) G_reen = backgnd_white;
-          else G_reen = 0;
+          else G_reen = 10;
 
           Serial.print(F("Temperature: "));
           Serial.print(temperature_K);
