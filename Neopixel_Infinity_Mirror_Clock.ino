@@ -300,17 +300,17 @@ void loop() {
 
   for (ms = 0; ms <= NUMPIXELS - 1; ms ++) {
     strip.setPixelColor(ms, strip.Color(MS_COLOR));                          // Set the millisecond color
-    if (h + 1 >= NUMPIXELS) strip.setPixelColor(1, strip.Color(H_COLOR));    // Set hour color at #1 position
+    if (h + 1 >= NUMPIXELS) strip.setPixelColor(0, strip.Color(H_COLOR));    // Set hour color at #1 position
     else strip.setPixelColor(h + 1, strip.Color(H_COLOR));                   // Set hour color
     strip.setPixelColor(h, strip.Color(OLD_H_COLOR));                        // Set the old hour color
-    if (m + 1 >= NUMPIXELS) strip.setPixelColor(1, strip.Color(M_COLOR));    // Set the minute color at #1 position
+    if (m + 1 >= NUMPIXELS) strip.setPixelColor(0, strip.Color(M_COLOR));    // Set the minute color at #1 position
     else strip.setPixelColor(m + 1, strip.Color(M_COLOR));                   // Set the minute color
     strip.setPixelColor(m, strip.Color(OLD_M_COLOR));                        // Set the old minute color
     strip.setPixelColor(s, strip.Color(S_COLOR));                            // Set the second color
     if (m == h || m == h + 1)
       strip.setPixelColor(m, strip.Color(MH_COLOR));                         // Set the minute and hour combined color
     if (m + 1 == h || m + 1 == h + 1)
-      if (m + 1 >= NUMPIXELS) strip.setPixelColor(1, strip.Color(MH_COLOR)); // Set the minute and hour combined color at #1 position
+      if (m + 1 >= NUMPIXELS) strip.setPixelColor(0, strip.Color(MH_COLOR)); // Set the minute and hour combined color at #1 position
       else strip.setPixelColor(m + 1, strip.Color(MH_COLOR));                // Set the minute and hour combined color
 
     strip.show();           // Set the LEDs
@@ -320,17 +320,17 @@ void loop() {
     // Setting the LED and background colors after a specific delay
     strip.setPixelColor(ms, strip.Color(BACKGND));                           // Set the ms to the background color
     strip.setPixelColor(h, strip.Color(OLD_H_COLOR));                        // Set the old hour color
-    if (h + 1 >= NUMPIXELS) strip.setPixelColor(1, strip.Color(H_COLOR));    // Set hour color at #1 position
+    if (h + 1 >= NUMPIXELS) strip.setPixelColor(0, strip.Color(H_COLOR));    // Set hour color at #1 position
     else strip.setPixelColor(h + 1, strip.Color(H_COLOR));                   // Set hour color
     strip.setPixelColor(m, strip.Color(OLD_M_COLOR));                        // Set the old minute color
-    if (m + 1 >= NUMPIXELS) strip.setPixelColor(1, strip.Color(M_COLOR));    // Set the minute color at #1 position
+    if (m + 1 >= NUMPIXELS) strip.setPixelColor(0, strip.Color(M_COLOR));    // Set the minute color at #1 position
     else strip.setPixelColor(m + 1, strip.Color(M_COLOR));                   // Set the minute color
     strip.setPixelColor(s, strip.Color(S_COLOR));                            // Set the second color
     strip.setPixelColor(oldsec, strip.Color(BACKGND));                       // Set the old second to the background color
     if (m == h || m == h + 1)
       strip.setPixelColor(m, strip.Color(MH_COLOR));                         // Set the minute and hour combined color
     if (m + 1 == h || m + 1 == h + 1)
-      if (m + 1 >= NUMPIXELS) strip.setPixelColor(1, strip.Color(MH_COLOR)); // Set the minute and hour combined color at #1 position
+      if (m + 1 >= NUMPIXELS) strip.setPixelColor(0, strip.Color(MH_COLOR)); // Set the minute and hour combined color at #1 position
       else strip.setPixelColor(m + 1, strip.Color(MH_COLOR));                // Set the minute and hour combined color
 
     strip.show();  // Set the LEDs
