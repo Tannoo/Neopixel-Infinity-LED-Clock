@@ -137,7 +137,7 @@ void setup(void) {
 
   Serial.begin(115200);
   Serial.println(F("Starting up..."));
-
+  
   // >>>>>>> BEGIN OTA STUFF <<<<<<<
   // *******************************
   Serial.print(F("Connecting to wifi... "));
@@ -210,6 +210,7 @@ void setup(void) {
 
   // >>>>>>> Start Demo / Pixel test <<<<<<<
   // ***************************************
+  pinMode(NEOPIN, OUTPUT);
   strip.begin();
   strip.setBrightness(50);
   Serial.print(F("Pixel Color Test... "));
@@ -238,6 +239,10 @@ void loop() {
   oldmin = m; oldsec = s;
 
   DateTime now = RTC.now();
+
+  if (now.hour() > 12) hr = (now.hour() - 12);
+  else hr = now.hour();  
+
   if (now.hour() >= 12)  
     h = map(m, 0, NUMPIXELS - 1, (now.hour() - 12) * (NUMPIXELS / 12), ((now.hour() - 12) * (NUMPIXELS / 12)) + 4);
   else h = map(m, 0, NUMPIXELS - 1, now.hour() * (NUMPIXELS / 12), (now.hour() * (NUMPIXELS / 12)) + 4);
@@ -247,7 +252,8 @@ void loop() {
 
   // Chime
   if (old_hr != hr && m == 0) {
-    Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+    Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.print(s);
+    Serial.print(F(" | old_hr: ")); Serial.println(old_hr);
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeoffBackgnd(5);
     delay(200);
@@ -263,9 +269,10 @@ void loop() {
   }
 
   // Weather time interval
-  if ((millis() - lastTime) > weatherDelay) {   
-    lastTime = millis();
-    weather();        
+  if ((millis() - lastTime) > weatherDelay) {
+      ESP.wdtFeed(); // Keep the watchdogs happy
+      weather();
+      lastTime = millis();      
   }
 
   // **************
@@ -414,7 +421,9 @@ void digitalClockDisplay() {
   Serial.print(':');
   if (s < 10) Serial.print(F("0"));
   Serial.print(s);
-  Serial.println();
+  Serial.print(F(" | old_hr: ")); Serial.print(old_hr);
+  Serial.print(F(" vs. hr: ")); Serial.println(hr);
+  Serial.print(F(" or vs. h: ")); Serial.println(h);
 
   // Date and Time from NTP
   if (now.dayOfTheWeek() == 0) {
@@ -555,7 +564,14 @@ void FadeonBackgnd(uint8_t wait) {
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   for(int j = 0; j < backgnd_white; j ++) {
     for(uint16_t i = 0; i < strip.numPixels(); i ++) {
-      strip.setPixelColor(i, strip.Color(j, j, j));
+      strip.setPixelColor(i, strip.Color(R_ed, G_reen, B_lue));
+
+    //for(int i = 0; i < n; i++) { // larger values of 'n' will give a smoother/slower transition.
+    //  Rnew = Rstart + (Rend - Rstart) * i / n;
+    //  Gnew = Gstart + (Gend - Gstart) * i / n;
+    //  Bnew = Bstart + (Bend - Bstart) * i / n;
+    //  strip.setPixelColor(0, strip.Color(Rnew, Gnew, Bnew));
+    //}
     }
     strip.show();
     ESP.wdtFeed(); // Keep the watchdogs happy
