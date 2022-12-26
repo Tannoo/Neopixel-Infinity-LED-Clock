@@ -32,8 +32,8 @@ uint8_t B_lue;  // Background Blue
 
 // Register for a key @ https://openweathermap.org/api
 String openWeatherMapApiKey = "*****************************";
-String city = "Longmont";
-String countryCode = "US";
+// Goto https://openweathermap.org/ and search for your city. The citycode will then be in the address bar.
+String citycode = "********";
 String jsonBuffer;
 
 // >>>>>>> OTA STUFF <<<<<<<
@@ -107,9 +107,9 @@ uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
 #define OLD_H_COLOR            old_hf, oldh_backgnd_fade, oldh_backgnd_fade
 #define M_COLOR        m_backgnd_fade,                mf,    m_backgnd_fade
 #define OLD_M_COLOR oldm_backgnd_fade,            old_mf, oldm_backgnd_fade
-#define MH_COLOR                   hf,                mf,                 0
+#define MH_COLOR                   hf,                mf,    h_backgnd_fade
 #define S_COLOR                     0,                 0,               255
-#define MS_COLOR                 R_ed,               255,               255
+#define MS_COLOR                  255,               255,               255
 #define BACKGND                  R_ed,            G_reen,             B_lue
 #define ALL_WHITE                 255,               255,               255
 
@@ -657,7 +657,7 @@ uint8_t green(uint32_t c) { return (c >> 8); }
 uint8_t blue(uint32_t c) { return (c); }
 
 void weather() {
-          String serverPath = "http://api.openweathermap.org/data/2.5/weather?q=" + city + "," + countryCode + "&APPID=" + openWeatherMapApiKey;
+          String serverPath = "http://api.openweathermap.org/data/2.5/weather?id=" + citycode + "&APPID=" + openWeatherMapApiKey;
           ESP.wdtFeed(); // Keep the watchdogs happy
           jsonBuffer = httpGETRequest(serverPath.c_str());
           Serial.println(jsonBuffer);
@@ -678,6 +678,11 @@ void weather() {
           Serial.print(F("temperature: "));
           Serial.print(myObject["main"]["temp"]);
           Serial.println(F(" *K"));
+
+          // If processing power of the math is to be reduced,
+          // Include "units=imperial" or "units=metric" in the API call
+          // We are currently cooking on all 8 cylinders, so... we will do the math
+          // Default is Kelvin
 
           // Convert Kelvin temp to Ferenheiht
           temperature_F = 1.8 * (temperature_K - 273) + 32; // F = 1.8*(K-273) + 32
