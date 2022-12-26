@@ -225,10 +225,14 @@ void setup(void) {
   old_hr = hr; oldmin = m; oldsec = s;
 
   delay(500);
-  if (m == 0) hourchime(5);
-  else {
-    FadeOnBackgnd(30);    
+  if (m == 0) {
+    hourchime(5);
   }
+  FadeOnBackgnd(30);
+  for (int i = 0; i <= NUMPIXELS; i ++) {
+    strip.setPixelColor(i, strip.Color(BACKGND));
+  }
+  strip.show();
 }
 
 void loop() {
@@ -240,10 +244,7 @@ void loop() {
   if (now.hour() > 12) hr = (now.hour() - 12);
   else hr = now.hour();  
 
-  if (now.hour() >= 12)  
-    h = map(m, 0, NUMPIXELS - 1, (now.hour() - 12) * (NUMPIXELS / 12), ((now.hour() - 12) * (NUMPIXELS / 12)) + 4);
-  else h = map(m, 0, NUMPIXELS - 1, now.hour() * (NUMPIXELS / 12), (now.hour() * (NUMPIXELS / 12)) + 4);
-
+  h = map(m, 0, NUMPIXELS - 1, (hr * (NUMPIXELS / 12)), (hr * (NUMPIXELS / 12)) + 4);
   m = now.minute();
   s = now.second(); 
 
