@@ -22,10 +22,7 @@ char pass[] = "********"; // WiFi password
 #include <Arduino_JSON.h>
 unsigned long lastTime = 0;
 unsigned long weatherDelay = 600000;
-float temperature_K = 10;
-float temperature_F = 10;
-float max_temp_today;
-float min_temp_today;
+double temperature_K;
 uint8_t R_ed;   // Background Red
 uint8_t G_reen; // Background Green
 uint8_t B_lue;  // Background Blue
@@ -230,7 +227,7 @@ void setup(void) {
   delay(500);
   if (m == 0) hourchime(5);
   else {
-    FadeonBackgnd(20);    
+    FadeOnBackgnd(30);    
   }
 }
 
@@ -255,7 +252,7 @@ void loop() {
     Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.print(s);
     Serial.print(F(" | old_hr: ")); Serial.println(old_hr);
     ESP.wdtFeed(); // Keep the watchdogs happy
-    FadeOffBackgnd(20);
+    FadeOffBackgnd(30);
     delay(200);
     setDST(true);
     hourchime(3);
@@ -386,7 +383,7 @@ void hourchime(uint8_t wait) {
   Serial.println();
   Serial.println(F("Go fade on the background...(end of chime"));
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
-  FadeonBackgnd(20);
+  FadeOnBackgnd(30);
   Serial.println();
   Serial.println(F("Running the clock..."));
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
@@ -567,11 +564,11 @@ void sendNTPpacket(IPAddress &address) {
   ESP.wdtFeed(); // Keep the watchdogs happy
 }
 
-void FadeonBackgnd(uint8_t wait) {
+void FadeOnBackgnd(uint8_t wait) {
   Serial.println(F("Fading on the background..."));
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   uint8_t Rnew, Gnew, Bnew;
-  for(int j = 0; j < backgnd_white; j ++) {
+  for(int j = 0; j < (R_ed + B_lue) / 2; j ++) {
     for(uint16_t i = 0; i < NUMPIXELS; i ++) {
       Rnew = 0 + (R_ed   - 0) * j / backgnd_white;
       Gnew = 0 + (G_reen - 0) * j / backgnd_white;
@@ -588,7 +585,7 @@ void FadeOffBackgnd(uint8_t wait) {
   Serial.println(F("Fading off the background..."));
   Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
   uint8_t Rnew, Gnew, Bnew;
-  for(int j = backgnd_white; j >= 0; j --) {
+  for(int j = (R_ed + B_lue) / 2; j >= 0; j --) {
     for(uint16_t i = 0; i < NUMPIXELS; i ++) {
       Rnew = R_ed   + (0 - R_ed)   * j / backgnd_white;
       Gnew = G_reen + (0 - G_reen) * j / backgnd_white;
@@ -664,7 +661,7 @@ void weather() {
           JSONVar myObject = JSON.parse(jsonBuffer);
                double temperature_K  = (myObject["main"]["temp"]);
 
-          if (JSON.typeof(myObject) == "undefined") // JSON.typeof(jsonVar) can be used to get the type of the var
+          if (JSON.typeof(myObject) == "undefined")
             {
              Serial.println(F("Parsing input failed!"));
              return;
@@ -681,11 +678,10 @@ void weather() {
 
           // If processing power of the math is to be reduced,
           // Include "units=imperial" or "units=metric" in the API call
-          // We are currently cooking on all 8 cylinders, so... we will do the math
+          // We are currently cooking on all 8 cylinders, so... we will do the math for Fahrenheit
           // Default is Kelvin
 
-          // Convert Kelvin temp to Ferenheiht
-          temperature_F = 1.8 * (temperature_K - 273) + 32; // F = 1.8*(K-273) + 32
+          float temperature_F = 1.8 * (temperature_K - 273) + 32; // F = 1.8*(K-273) + 32
 
           // Now scale the temp to the red and blue colors
           R_ed  = map(temperature_F, 0, 100,   0, 70);
