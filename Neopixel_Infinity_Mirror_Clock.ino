@@ -241,10 +241,10 @@ void loop() {
 
   DateTime now = RTC.now();
 
-  if (now.hour() > 12) hr = (now.hour() - 12);
+  if (now.hour() >= 12) hr = (now.hour() - 12);
   else hr = now.hour();  
 
-  h = map(m, 0, NUMPIXELS - 1, (hr * (NUMPIXELS / 12)), (hr * (NUMPIXELS / 12)) + 4);
+  h = map(m, 0, NUMPIXELS - 1, hr * (NUMPIXELS / 12), (hr * (NUMPIXELS / 12)) + 4);
   m = now.minute();
   s = now.second(); 
 
