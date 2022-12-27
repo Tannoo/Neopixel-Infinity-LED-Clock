@@ -143,6 +143,7 @@ void setup(void) {
   Serial.begin(115200);
   Serial.println(F("Starting up..."));
 
+  // Start the NEOPIXEL strip
   pinMode(NEOPIN, OUTPUT);
   strip.begin();
   strip.setBrightness(50);
@@ -227,13 +228,9 @@ void setup(void) {
 
   // >>>>>>> Start Demo / Pixel test <<<<<<<
   // ***************************************
-  pinMode(NEOPIN, OUTPUT);
-  strip.begin();
-  strip.setBrightness(50);
   Serial.print(F("Pixel Color Test... "));
   Serial.println(F("White Over Rainbow"));
   whiteOverRainbow(20,25,5);
-  // End Demo / Pixel test
 
   // Set the DST and the time
   setDST(true);
