@@ -125,6 +125,8 @@ WiFiUDP Udp;
 uint8_t localPort = 8888;  // Local port to listen for UDP packets
 unsigned long previousMillis = 0;
 uint32_t timeUpdate = 60000;
+//unsigned long ntpLastMillis = 0;
+//uint32_t ntpUpdate = 120000;
 
 void setup(void) {
   // Generate random seed
@@ -204,7 +206,7 @@ void setup(void) {
 
   Serial.println(F("Waiting for sync"));
   setSyncProvider(getNtpTime);  
-  setSyncInterval(86400);
+  setSyncInterval(300);
 
   ESP.wdtDisable();
 
@@ -234,11 +236,10 @@ void setup(void) {
     hourchime(5);
   }
   // Just for setting up the background (eye candy)
-  FadeOnBackgnd(30);
   for (int i = 0; i <= NUMPIXELS; i ++) {
     strip.setPixelColor(i, strip.Color(BACKGND));
   }
-  strip.show();
+  FadeOnBackgnd(30);
 }
 
 void loop() {
@@ -256,7 +257,7 @@ void loop() {
 
   // Chime
   if (old_hr != hr && m == 0) {
-    Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.print(s);
+    displayTime();
     Serial.print(F(" | old_hr: ")); Serial.println(old_hr);
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeOffBackgnd(30);
@@ -278,6 +279,12 @@ void loop() {
       weather();
       lastTime = millis();      
   }
+
+  // NTP time interval
+  //if ((millis() - ntpLastMillis) >= ntpUpdate) {
+  //  ntpLastMillis = millis();
+  //  setSyncProvider(getNtpTime);
+  //}
 
   // **************
   //      TIME
@@ -389,11 +396,11 @@ void hourchime(uint8_t wait) {
   }
   Serial.println();
   Serial.println(F("Go fade on the background...(end of chime"));
-  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+  displayTime();
   FadeOnBackgnd(30);
   Serial.println();
   Serial.println(F("Running the clock..."));
-  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+  displayTime();
   Serial.println();
 }
 
@@ -439,7 +446,6 @@ void digitalClockDisplay() {
 
   // Date and Time from NTP
   if (now.dayOfTheWeek() == 0) {
-    //setSyncProvider(getNtpTime);
 
     Serial.print(F("Daylight Savings? "));
     if (DST == true) Serial.println(F("Yes"));
@@ -573,9 +579,9 @@ void sendNTPpacket(IPAddress &address) {
 
 void FadeOnBackgnd(uint8_t wait) {
   Serial.println(F("Fading on the background..."));
-  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+  displayTime();
   uint8_t Rnew, Gnew, Bnew;
-  for(int j = 0; j < (R_ed + B_lue) / 2; j ++) {
+  for(int j = 0; j < (R_ed + B_lue) / 3; j ++) {
     for(uint16_t i = 0; i < NUMPIXELS; i ++) {
       Rnew = 0 + (R_ed   - 0) * j / backgnd_white;
       Gnew = 0 + (G_reen - 0) * j / backgnd_white;
@@ -590,13 +596,13 @@ void FadeOnBackgnd(uint8_t wait) {
 
 void FadeOffBackgnd(uint8_t wait) {
   Serial.println(F("Fading off the background..."));
-  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+  displayTime();
   uint8_t Rnew, Gnew, Bnew;
-  for(int j = (R_ed + B_lue) / 2; j >= 0; j --) {
+  for(int j = (R_ed + B_lue) / 3; j >= 0; j --) {
     for(uint16_t i = 0; i < NUMPIXELS; i ++) {
-      Rnew = R_ed   + (0 - R_ed)   * j / backgnd_white;
-      Gnew = G_reen + (0 - G_reen) * j / backgnd_white;
-      Bnew = B_lue  + (0 - B_lue)  * j / backgnd_white;
+      Rnew = R_ed   + (R_ed   - 0)   * j / backgnd_white;
+      Gnew = G_reen + (G_reen - 0) * j / backgnd_white;
+      Bnew = B_lue  + (B_lue  - 0)  * j / backgnd_white;
       strip.setPixelColor(i, strip.Color(Rnew, Gnew, Bnew));
     }
     strip.show();
@@ -661,74 +667,75 @@ uint8_t green(uint32_t c) { return (c >> 8); }
 uint8_t blue(uint32_t c) { return (c); }
 
 void weather() {
-          String serverPath = "http://api.openweathermap.org/data/2.5/weather?id=" + citycode + "&uints=" + temp_units + "&APPID=" + openWeatherMapApiKey;
-          ESP.wdtFeed(); // Keep the watchdogs happy
-          jsonBuffer = httpGETRequest(serverPath.c_str());
-          Serial.println(jsonBuffer);
-          JSONVar myObject = JSON.parse(jsonBuffer);
-               double temperature_K  = (myObject["main"]["temp"]);
+  displayTime();
+  String serverPath = "http://api.openweathermap.org/data/2.5/weather?id=" + citycode + "&uints=" + temp_units + "&appid=" + openWeatherMapApiKey;
+  ESP.wdtFeed(); // Keep the watchdogs happy
+  jsonBuffer = httpGETRequest(serverPath.c_str());
+  Serial.println(jsonBuffer);
+  JSONVar myObject = JSON.parse(jsonBuffer);
+        double temperature_K  = (myObject["main"]["temp"]);
 
-          if (JSON.typeof(myObject) == "undefined")
-            {
-             Serial.println(F("Parsing input failed!"));
-             return;
-             }
-          ESP.wdtFeed(); // Keep the watchdogs happy
-          Serial.println(F("****************"));
-          Serial.print(F("JSON object = "));
-          Serial.println(myObject);
-          Serial.println(F("****************"));
-          Serial.println(F("extracted from JSON object:"));
-          Serial.print(F("temperature: "));
-          Serial.print(myObject["main"]["temp"]);
-          Serial.println(F(" *K"));
+  if (JSON.typeof(myObject) == "undefined")
+    {
+      Serial.println(F("Parsing input failed!"));
+      return;
+      }
+  ESP.wdtFeed(); // Keep the watchdogs happy
+  Serial.println(F("****************"));
+  Serial.print(F("JSON object = "));
+  Serial.println(myObject);
+  Serial.println(F("****************"));
+  Serial.println(F("extracted from JSON object:"));
+  Serial.print(F("temperature: "));
+  Serial.print(myObject["main"]["temp"]);
+  Serial.println(F(" *K"));
 
-          // If processing power of the math is to be reduced,
-          // Include "units=imperial" or "units=metric" in the API call
-          // We are currently cooking on all 8 cylinders, so... we will do the math for Fahrenheit
-          // Standard (default) is Kelvin
+  // If processing power of the math is to be reduced,
+  // Include "units=imperial" or "units=metric" in the API call
+  // We are currently cooking on all 8 cylinders, so... we will do the math for Fahrenheit
+  // Standard (default) is Kelvin
 
-          // Now scale the temp to the red and blue colors
-          String scale;
-          float temperature;
-          if (temp_units == "imperial") {
-            temperature = (temperature_K - 273.15) * 9/5 + 32;
-            R_ed  = map(temperature, 0, 100,  0, 70);
-            B_lue = map(temperature, 0, 100, 70,  0);
-            String scale = "F";
-          }
-          else if (temp_units == "metric") {
-            temperature = temperature_K - 273.15; // C = K-273
-            R_ed  = map(temperature, -17, 38,  0, 70);
-            B_lue = map(temperature, -17, 38, 70,  0);
-            String scale = "C";
-          }
-          else if (temp_units == "standard") {
-            temperature = temperature_K;
-            R_ed  = map(temperature, 255.372, 310.928,  0, 70);
-            B_lue = map(temperature, 255.372, 310.928, 70,  0);
-            String scale = "K";
-          }            
+  // Now scale the temp to the red and blue colors
+  String scale;
+  float temperature;
+  if (temp_units == "imperial") {
+    temperature = (temperature_K - 273.15) * 9/5 + 32;
+    R_ed  = map(temperature, 0, 100,  0, 70);
+    B_lue = map(temperature, 0, 100, 70,  0);
+    String scale = "F";
+  }
+  else if (temp_units == "metric") {
+    temperature = temperature_K - 273.15; // C = K-273
+    R_ed  = map(temperature, -17, 38,  0, 70);
+    B_lue = map(temperature, -17, 38, 70,  0);
+    String scale = "C";
+  }
+  else if (temp_units == "standard") {
+    temperature = temperature_K;
+    R_ed  = map(temperature, 255.372, 310.928,  0, 70);
+    B_lue = map(temperature, 255.372, 310.928, 70,  0);
+    String scale = "K";
+  }            
 
-          // Let's lighten up things if there is a good temp.
-          if (temperature_K >= 50) G_reen = backgnd_white;
-          else G_reen = 10;
+  // Let's lighten up things if there is a good temp.
+  if (temperature_K >= 50) G_reen = backgnd_white;
+  else G_reen = 10;
 
-          Serial.print(F("Temperature: "));
-          Serial.print(temperature_K);
-          Serial.print(F("K | "));
-          Serial.print(F("Temperature: "));
-          Serial.print(temperature);
-          Serial.print(scale);
-          Serial.print(F(" | "));
-          Serial.print(F("Red value: "));
-          Serial.print(R_ed);
-          Serial.print(F(" | "));
-          Serial.print(F("Green value: "));
-          Serial.print(G_reen);
-          Serial.print(F(" | "));
-          Serial.print(F("Blue value: "));
-          Serial.println(B_lue);
+  Serial.print(F("Temperature: "));
+  Serial.print(temperature_K);
+  Serial.print(F("K | "));
+  Serial.print(F("Temperature: "));
+  Serial.print(temperature);
+  Serial.print(scale);
+  Serial.print(F(" | "));
+  Serial.print(F("Red value: "));
+  Serial.print(R_ed);
+  Serial.print(F(" | "));
+  Serial.print(F("Green value: "));
+  Serial.print(G_reen);
+  Serial.print(F(" | "));
+  Serial.print(F("Blue value: "));
+  Serial.println(B_lue);
 }
 
 // *************************
@@ -756,4 +763,8 @@ String httpGETRequest(const char* serverName) {
    }
    http.end(); // free resources
    return payload;
+}
+
+void displayTime() {
+  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
 }
