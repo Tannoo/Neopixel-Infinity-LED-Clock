@@ -20,12 +20,12 @@ char pass[] = "********"; // WiFi password
 #include <WiFiClient.h>
 #include <ESP8266HTTPClient.h>
 #include <Arduino_JSON.h>
-unsigned long lastTime = 0;
-unsigned long weatherDelay = 240000;
+unsigned long previousWeatherMillis = 0;
+unsigned long weatherUpdate = 240000;
 double temperature_K;
-uint8_t R_ed;   // Background Red
-uint8_t G_reen; // Background Green
-uint8_t B_lue;  // Background Blue
+uint8_t R_ed;   // Background Red set by the weather
+uint8_t G_reen; // Background Green set by the weather
+uint8_t B_lue;  // Background Blue set by the weather
 
 // Register for a key @ https://openweathermap.org/api
 String openWeatherMapApiKey = "*****************************";
@@ -124,10 +124,8 @@ bool DST;
 
 WiFiUDP Udp;
 uint8_t localPort = 8888;  // Local port to listen for UDP packets
-unsigned long previousMillis = 0;
+unsigned long previousTimeMillis = 0;
 uint32_t timeUpdate = 60000;
-//unsigned long ntpLastMillis = 0;
-//uint32_t ntpUpdate = 120000;
 
 void setup(void) {
   // Generate random seed
@@ -277,13 +275,13 @@ void loop() {
   }
 
   // Clock time interval
-  if ((millis() - previousMillis) >= timeUpdate) {
+  if ((millis() - previousTimeMillis) >= timeUpdate) {
     previousMillis = millis();
     digitalClockDisplay();
   }
 
   // Weather time interval
-  if ((millis() - lastTime) > weatherDelay) {
+  if ((millis() - previousWeatherMillis) > weatherUpdate) {
       ESP.wdtFeed(); // Keep the watchdogs happy
       weather();
       lastTime = millis();      
