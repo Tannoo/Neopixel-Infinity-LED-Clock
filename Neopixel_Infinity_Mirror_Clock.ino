@@ -21,7 +21,7 @@ char pass[] = "********"; // WiFi password
 #include <ESP8266HTTPClient.h>
 #include <Arduino_JSON.h>
 unsigned long lastTime = 0;
-unsigned long weatherDelay = 600000;
+unsigned long weatherDelay = 240000;
 double temperature_K;
 uint8_t R_ed;   // Background Red
 uint8_t G_reen; // Background Green
