@@ -29,8 +29,13 @@ uint8_t B_lue;  // Background Blue
 
 // Register for a key @ https://openweathermap.org/api
 String openWeatherMapApiKey = "*****************************";
+
 // Goto https://openweathermap.org/ and search for your city. The citycode will then be in the address bar.
 String citycode = "********";
+
+// "standard" = Kelvin, "imperial" = Fahrenheit, or "metric" = Celsius (will show up in serial data)
+String temp_units = "imperial";
+
 String jsonBuffer;
 
 // >>>>>>> OTA STUFF <<<<<<<
@@ -228,6 +233,7 @@ void setup(void) {
   if (m == 0) {
     hourchime(5);
   }
+  // Just for setting up the background (eye candy)
   FadeOnBackgnd(30);
   for (int i = 0; i <= NUMPIXELS; i ++) {
     strip.setPixelColor(i, strip.Color(BACKGND));
@@ -655,7 +661,7 @@ uint8_t green(uint32_t c) { return (c >> 8); }
 uint8_t blue(uint32_t c) { return (c); }
 
 void weather() {
-          String serverPath = "http://api.openweathermap.org/data/2.5/weather?id=" + citycode + "&APPID=" + openWeatherMapApiKey;
+          String serverPath = "http://api.openweathermap.org/data/2.5/weather?id=" + citycode + "&uints=" + temp_units + "&APPID=" + openWeatherMapApiKey;
           ESP.wdtFeed(); // Keep the watchdogs happy
           jsonBuffer = httpGETRequest(serverPath.c_str());
           Serial.println(jsonBuffer);
@@ -680,13 +686,30 @@ void weather() {
           // If processing power of the math is to be reduced,
           // Include "units=imperial" or "units=metric" in the API call
           // We are currently cooking on all 8 cylinders, so... we will do the math for Fahrenheit
-          // Default is Kelvin
-
-          float temperature_F = 1.8 * (temperature_K - 273) + 32; // F = 1.8*(K-273) + 32
+          // Standard (default) is Kelvin
 
           // Now scale the temp to the red and blue colors
-          R_ed  = map(temperature_F, 0, 100,   0, 70);
-          B_lue = map(temperature_F, 0, 100, 70,   0);
+          String scale;
+          float temperature;
+          if (temp_units == "imperial") {
+            temperature = (temperature_K - 273.15) * 9/5 + 32;
+            R_ed  = map(temperature, 0, 100,  0, 70);
+            B_lue = map(temperature, 0, 100, 70,  0);
+            String scale = "F";
+          }
+          else if (temp_units == "metric") {
+            temperature = temperature_K - 273.15; // C = K-273
+            R_ed  = map(temperature, -17, 38,  0, 70);
+            B_lue = map(temperature, -17, 38, 70,  0);
+            String scale = "C";
+          }
+          else if (temp_units == "standard") {
+            temperature = temperature_K;
+            R_ed  = map(temperature, 255.372, 310.928,  0, 70);
+            B_lue = map(temperature, 255.372, 310.928, 70,  0);
+            String scale = "K";
+          }            
+
           // Let's lighten up things if there is a good temp.
           if (temperature_K >= 50) G_reen = backgnd_white;
           else G_reen = 10;
@@ -695,8 +718,9 @@ void weather() {
           Serial.print(temperature_K);
           Serial.print(F("K | "));
           Serial.print(F("Temperature: "));
-          Serial.print(temperature_F);
-          Serial.print(F("F | "));
+          Serial.print(temperature);
+          Serial.print(scale);
+          Serial.print(F(" | "));
           Serial.print(F("Red value: "));
           Serial.print(R_ed);
           Serial.print(F(" | "));
