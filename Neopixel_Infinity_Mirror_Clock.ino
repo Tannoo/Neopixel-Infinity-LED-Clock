@@ -142,15 +142,24 @@ void setup(void) {
 
   Serial.begin(115200);
   Serial.println(F("Starting up..."));
-  
+
+  pinMode(NEOPIN, OUTPUT);
+  strip.begin();
+  strip.setBrightness(50);
+
   // >>>>>>> Start WiFi <<<<<<<
   // *******************************
   Serial.print(F("Connecting to wifi... "));
   Serial.println(ssid);
   WiFi.begin(ssid, pass);
-  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
-    Serial.println(F("Connection Failed! Try again later."));
-    delay(5000);
+  uint8_t k = 0;
+  while (WiFi.status() != WL_CONNECTED) {
+    if (k <= NUMPIXELS - 1) {
+      strip.setPixelColor(k, strip.Color(H_COLOR));
+      k ++;
+    }
+    Serial.print(".");
+    delay(250);
   }
 
   // >>>>>>> Start OTA Stuff <<<<<<<
