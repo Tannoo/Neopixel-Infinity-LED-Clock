@@ -4,8 +4,8 @@
 
 // http://arduino.esp8266.com/stable/package_esp8266com_index.json
 
-// >>>>>>> WIFI & UDP <<<<<<<
-// **************************
+// >>>>>>> WIFI & UDP Stuff <<<<<<<
+// ********************************
 #include <TimeLib.h>         // For Date/Time operations - Time library by Michael Margolis v1.6.1
 #include <ESP8266WiFi.h>     // For WiFi ESP8266WiFi library -- unknown source
 #include <WiFiUdp.h>         // For UDP NTP
@@ -15,7 +15,7 @@ unsigned long NTPreqnum = 0; // For NTP
 char ssid[] = "********"; // WiFi name
 char pass[] = "********"; // WiFi password
 
-// >>>>>>> WEATHER STUFF <<<<<<<
+// >>>>>>> Weather Stuff <<<<<<<
 // *****************************
 #include <WiFiClient.h>
 #include <ESP8266HTTPClient.h>
@@ -38,12 +38,12 @@ String temp_units = "imperial";
 
 String jsonBuffer;
 
-// >>>>>>> OTA STUFF <<<<<<<
+// >>>>>>> OTA Stuff <<<<<<<
 // *************************
 #include <ESP8266mDNS.h>
 #include <ArduinoOTA.h>
 
-// >>>>>>> RTC STUFF <<<<<<<
+// >>>>>>> RTC Stuff <<<<<<<
 // *************************
 //#include <Wire.h>   // Library for I2C communication
 //#include <SPI.h>    // Not used here, but needed to prevent a RTClib compile error
@@ -51,7 +51,7 @@ String jsonBuffer;
 
 RTC_DS1307 RTC;     // Setup an instance of DS1307 naming it RTC
 
-// >>>>>>> NEOPIXEL STUFF <<<<<<<
+// >>>>>>> NEOPIXEL Stuff <<<<<<<
 // ******************************
 #include <Adafruit_NeoPixel.h> // Neopixel library by Adafruit
 
@@ -114,6 +114,7 @@ uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
 #define MS_COLOR                  255,               255,               255
 #define BACKGND                  R_ed,            G_reen,             B_lue
 #define ALL_WHITE                 255,               255,               255
+#define WIFI_WAIT                  70,                70,                70
 
 // NTP Servers:
 IPAddress timeServer;
@@ -142,7 +143,7 @@ void setup(void) {
   Serial.begin(115200);
   Serial.println(F("Starting up..."));
   
-  // >>>>>>> BEGIN OTA STUFF <<<<<<<
+  // >>>>>>> Start WiFi <<<<<<<
   // *******************************
   Serial.print(F("Connecting to wifi... "));
   Serial.println(ssid);
@@ -151,6 +152,9 @@ void setup(void) {
     Serial.println(F("Connection Failed! Try again later."));
     delay(5000);
   }
+
+  // >>>>>>> Start OTA Stuff <<<<<<<
+  // *******************************
   ArduinoOTA.setPassword("3825"); // OTA password
 
   ArduinoOTA.onStart([]() {
@@ -182,7 +186,7 @@ void setup(void) {
   Serial.println(WiFi.localIP());
   // END OTA STUFF
 
-  // >>>>>>> BEGIN RTC STUFF <<<<<<<
+  // >>>>>>> Start RTC Stuff <<<<<<<
   // *******************************
   Wire.begin(); // Start the I2C
   RTC.begin();  // Init RTC
@@ -229,7 +233,6 @@ void setup(void) {
 
   Serial.println(F("Getting RTC time..."));
   digitalClockDisplay();
-  old_hr = hr; oldmin = m; oldsec = s;
 
   delay(500);
   if (m == 0) {
@@ -251,13 +254,13 @@ void loop() {
   if (now.hour() >= 12) hr = (now.hour() - 12);
   else hr = now.hour();  
 
-  h = map(m, 0, NUMPIXELS - 1, hr * (NUMPIXELS / 12), (hr * (NUMPIXELS / 12)) + 4);
+  h = map(m, 0, NUMPIXELS - 1, hr * (NUMPIXELS / 12), (hr * (NUMPIXELS / 12)) + ((NUMPIXELS / 12) - 1));
   m = now.minute();
   s = now.second(); 
 
   // Chime
   if (old_hr != hr && m == 0) {
-    displayTime();
+    displaySerialTime();
     Serial.print(F(" | old_hr: ")); Serial.println(old_hr);
     ESP.wdtFeed(); // Keep the watchdogs happy
     FadeOffBackgnd(30);
@@ -286,9 +289,9 @@ void loop() {
   //  setSyncProvider(getNtpTime);
   //}
 
-  // **************
-  //      TIME
-  // **************
+  // ********************
+  //      Time Stuff
+  // ********************
 
   // Tried a few times to fade the second's LED and it just makes the
   // second's LED black. No fading to be seen.
@@ -396,11 +399,11 @@ void hourchime(uint8_t wait) {
   }
   Serial.println();
   Serial.println(F("Go fade on the background...(end of chime"));
-  displayTime();
+  displaySerialTime();
   FadeOnBackgnd(30);
   Serial.println();
   Serial.println(F("Running the clock..."));
-  displayTime();
+  displaySerialTime();
   Serial.println();
 }
 
@@ -500,6 +503,7 @@ void digitalClockDisplay() {
   }
   m = now.minute();
   s = now.second();
+  old_hr = hr; oldmin = m; oldsec = s;
 }
 
 void setDST(bool check) {
@@ -579,7 +583,7 @@ void sendNTPpacket(IPAddress &address) {
 
 void FadeOnBackgnd(uint8_t wait) {
   Serial.println(F("Fading on the background..."));
-  displayTime();
+  displaySerialTime();
   uint8_t Rnew, Gnew, Bnew;
   for(int j = 0; j < (R_ed + B_lue) / 3; j ++) {
     for(uint16_t i = 0; i < NUMPIXELS; i ++) {
@@ -596,7 +600,7 @@ void FadeOnBackgnd(uint8_t wait) {
 
 void FadeOffBackgnd(uint8_t wait) {
   Serial.println(F("Fading off the background..."));
-  displayTime();
+  displaySerialTime();
   uint8_t Rnew, Gnew, Bnew;
   for(int j = (R_ed + B_lue) / 3; j >= 0; j --) {
     for(uint16_t i = 0; i < NUMPIXELS; i ++) {
@@ -667,7 +671,7 @@ uint8_t green(uint32_t c) { return (c >> 8); }
 uint8_t blue(uint32_t c) { return (c); }
 
 void weather() {
-  displayTime();
+  displaySerialTime();
   String serverPath = "http://api.openweathermap.org/data/2.5/weather?id=" + citycode + "&uints=" + temp_units + "&appid=" + openWeatherMapApiKey;
   ESP.wdtFeed(); // Keep the watchdogs happy
   jsonBuffer = httpGETRequest(serverPath.c_str());
@@ -765,6 +769,10 @@ String httpGETRequest(const char* serverName) {
    return payload;
 }
 
-void displayTime() {
-  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.println(s);
+void displaySerialTime() {
+  Serial.println(F("          **************"));
+  Serial.print(F("          »» "));
+  Serial.print(F("Time: ")); Serial.print(hr); Serial.print(F(":")); Serial.print(m); Serial.print(F(":")); Serial.print(s);
+  Serial.println(F(" ««"));
+  Serial.println(F("          **************"));
 }
