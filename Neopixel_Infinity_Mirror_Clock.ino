@@ -45,8 +45,6 @@ String jsonBuffer;
 
 // >>>>>>> RTC Stuff <<<<<<<
 // *************************
-//#include <Wire.h>   // Library for I2C communication
-//#include <SPI.h>    // Not used here, but needed to prevent a RTClib compile error
 #include <RTClib.h> // Library for RTC stuff
 
 RTC_DS1307 RTC;     // Setup an instance of DS1307 naming it RTC
@@ -148,15 +146,14 @@ void setup(void) {
 
   // >>>>>>> Start WiFi <<<<<<<
   // *******************************
+  uint8_t k = 0;
   Serial.print(F("Connecting to wifi... "));
   Serial.println(ssid);
   WiFi.begin(ssid, pass);
-  uint8_t k = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    if (k <= NUMPIXELS - 1) {
-      strip.setPixelColor(k, strip.Color(H_COLOR));
-      k ++;
-    }
+    strip.setPixelColor(k, strip.Color(H_COLOR));
+    if (k >= NUMPIXELS - 1) k = 0;
+    else k ++;
     Serial.print(".");
     delay(250);
   }
@@ -276,7 +273,7 @@ void loop() {
 
   // Clock time interval
   if ((millis() - previousTimeMillis) >= timeUpdate) {
-    previousMillis = millis();
+    previousTimeMillis = millis();
     digitalClockDisplay();
   }
 
@@ -284,14 +281,8 @@ void loop() {
   if ((millis() - previousWeatherMillis) > weatherUpdate) {
       ESP.wdtFeed(); // Keep the watchdogs happy
       weather();
-      lastTime = millis();      
+      previousWeatherMillis = millis();
   }
-
-  // NTP time interval
-  //if ((millis() - ntpLastMillis) >= ntpUpdate) {
-  //  ntpLastMillis = millis();
-  //  setSyncProvider(getNtpTime);
-  //}
 
   // ********************
   //      Time Stuff
@@ -438,7 +429,7 @@ void digitalClockDisplay() {
   Serial.print(now.second(), DEC);
   Serial.println();
 
-  // Clock LED Time  
+  // Clock LED Time
   Serial.print(F("Clock LED Time: "));
   Serial.print(h);
   Serial.print(':');
@@ -723,9 +714,9 @@ void weather() {
     R_ed  = map(temperature, 255.372, 310.928,  0, 70);
     B_lue = map(temperature, 255.372, 310.928, 70,  0);
     String scale = "K";
-  }            
+  }
 
-  // Let's lighten up things if there is a good temp.
+  // Let's lighten up things if there is a good temp
   if (temperature_K >= 50) G_reen = backgnd_white;
   else G_reen = 10;
 
@@ -749,14 +740,14 @@ void weather() {
 // *************************
 //  http GET request module
 // *************************
-String httpGETRequest(const char* serverName) {         
+String httpGETRequest(const char* serverName) {
 
    WiFiClient client;
    HTTPClient http;
 
-   http.begin(client, serverName); // your IP address with path or Domain name with URL path 
+   http.begin(client, serverName); // your IP address with path or Domain name with URL path
 
-   int httpResponseCode = http.GET(); // send HTTP POST request  
+   int httpResponseCode = http.GET(); // send HTTP POST request
    String payload = "{}";
    ESP.wdtFeed(); // Keep the watchdogs happy
    if (httpResponseCode>0) {
