@@ -19,12 +19,12 @@ This clock is using an Adafruit Feather 32 V2 and a DS3132 Feather wing.
 # Libraries needed:
 
     Adafruit_NeoPixel - Neopixel library by Adafruit
-    TimeLib - Time library by Michael Margolis v1.6.1
-    WiFi - WiFi support
-    WiFiUdp - Udp operations
-    WiFiManager - Configuration of a wifi connection
-    WiFiClient - Support for weather data
-    HTTPClient - Support for weather data
-    Arduino_JSON - Support weather data
-    ArduinoOTA - OTA support
-    RTClib - Real time clock support by Adafruit
+    TimeLib           - Time library by Michael Margolis v1.6.1
+    WiFi              - WiFi support
+    WiFiUdp           - Udp operations
+    WiFiManager       - Configuration of a wifi connection
+    WiFiClient        - Support for weather data
+    HTTPClient        - Support for weather data
+    Arduino_JSON      - Support weather data
+    ArduinoOTA        - OTA support
+    RTClib            - Real time clock support by Adafruit
