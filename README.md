@@ -14,3 +14,28 @@ This clock is using an Adafruit Feather 32 V2 and a DS3132 Feather wing.
     NTP sync'ed time for the RTC.
     Outside temperature via Weather update from openweathermap.org for the the background color.
     Dual-core usage to provide a more stable operation.
+
+
+# Libraries needed:
+
+// Neopixel support
+Neopixel library by Adafruit
+
+// Date and time operations
+Time library by Michael Margolis v1.6.1
+
+// Wifi Support
+WiFi library
+WiFiUdp
+WiFiManager
+
+// Weather
+WiFiClient
+HTTPClient
+Arduino_JSON
+
+// OTA abilities
+ArduinoOTA
+
+// RTC from Adafruit
+RTClib
