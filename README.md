@@ -13,8 +13,9 @@ This clock is using an Adafruit Feather 32 V2 and a DS3132 Feather wing.
     DS3231 real time clock for accurate time-keeping ability.
     NTP sync'ed time for the RTC.
     Outside temperature via Weather update from openweathermap.org for the the background color.
-    Dual-core usage to provide a more stable operation.
-
+    Dual-core usage to provide a more stable operations.
+    OTA updates now reflected by entire strip transitioning from green to red.
+    Strip brightness dimmed to 1/4 brightness during nighttime hours.
 
 # Libraries used:
 
