@@ -134,7 +134,7 @@ uint8_t ms, s, m, mf, hf, h, hr;
 uint8_t oldsec, old_mf, oldmin, old_hf, old_hr;
 uint8_t m_backgnd_fade, h_backgnd_fade;
 uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
-uint8_t old_brightness, OM;
+uint8_t old_brightness;
 
 #define H_COLOR hf, h_backgnd_fade, h_backgnd_fade
 #define OLD_H_COLOR old_hf, oldh_backgnd_fade, oldh_backgnd_fade
@@ -583,7 +583,6 @@ void rtcTime() {
   Serial.print((RTCtemp * 9 / 5) + 32);
   Serial.print(F("°F"));
   Serial.println();
-
 }
 
 void ntpTime() {
