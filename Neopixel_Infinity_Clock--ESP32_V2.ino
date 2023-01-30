@@ -4,22 +4,24 @@
  *  - Over the air update capability
  *  - Nation Time Protocol server polling to update the RTC
  *  - Real Time Clock for accurate time keeping 
- *  - Weather polling for current temperature to set the background color
+ *  - Weather polling for current temperature to set the background color (need to supply API key)
  *  - Strip brightness dims over the evening hours and brightens over the morning hours
  *  - OTA updates stop the time operations and sets strip from green to red on progress
+ *  - OTA default passcode is 0000
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
 
 // ESP Feather32 setting up the other core
 TaskHandle_t timers;
-const int OTA_beatLED = 13;
-bool OTA_beat = LOW;
+const int heartbeatLED = 13;
+bool heartbeat = LOW;
 
 // >>>>>>> Time libraries <<<<<<<
 // ******************************
 #include <TimeLib.h>  // For Date/Time operations - Time library by Michael Margolis v1.6.1
 bool stopTime = false; // OTA purpose
+#define TIMEDELAY 889.0
 
 // >>>>>>> WIFI libraries <<<<<<<
 // ******************************
@@ -53,10 +55,10 @@ uint32_t previousTimeMillis = 0;
 uint32_t timeUpdate = 60000;
 // NTP timer
 uint32_t previousNTPMillis = 0;
-uint32_t NTPUpdate = 30000;
+uint32_t NTPUpdate = 600000;
 // OTA_beat timer
-uint32_t previousOTAbeatMillis = 0;
-uint32_t OTAUpdate = 1000;
+uint32_t previousHeartbeatMillis = 0;
+uint32_t heartUpdate = 1000;
 
 // Temperature setup
 double temperature;
@@ -81,7 +83,9 @@ String jsonBuffer;
 #define NUMPIXELS 60
 #define NEOPIXEL_TYPE NEO_GRBW
 
-#define MIN_BRIGHTNESS 64
+#define MORNING 5
+#define EVENING 17
+#define MIN_BRIGHTNESS 50
 uint8_t brightness;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
@@ -130,7 +134,7 @@ uint8_t ms, s, m, mf, hf, h, hr;
 uint8_t oldsec, old_mf, oldmin, old_hf, old_hr;
 uint8_t m_backgnd_fade, h_backgnd_fade;
 uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
-uint8_t old_brightness;
+uint8_t old_brightness, OM;
 
 #define H_COLOR hf, h_backgnd_fade, h_backgnd_fade
 #define OLD_H_COLOR old_hf, oldh_backgnd_fade, oldh_backgnd_fade
@@ -185,8 +189,8 @@ void setup() {
   Serial.println();
   Serial.println(F("Starting up..."));
 
-  // OTA_beat LED
-  pinMode(OTA_beatLED, OUTPUT);
+  // heartbeat LED
+  pinMode(heartbeatLED, OUTPUT);
 
   // Start the NEOPIXEL strip
   pinMode(NEOPIN, OUTPUT);
@@ -206,7 +210,7 @@ void setup() {
 
   // >>>>>>> Start OTA Stuff <<<<<<<
   // *******************************
-  ArduinoOTA.setPassword("----");  // OTA password
+  ArduinoOTA.setPassword("0000");  // OTA password
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -279,7 +283,7 @@ void setup() {
   DateTime now = RTC.now();
   Serial.print(F("now.hour(): "));
   Serial.print(now.hour());
-  if (now.hour() == 18) brightness = MIN_BRIGHTNESS;
+  if (now.hour() >= EVENING + 1 || now.hour() <= MORNING - 1) brightness = MIN_BRIGHTNESS;
   else brightness = 255;
   Serial.print(F(" - Setting the brightness to "));
   Serial.println(brightness);
@@ -287,16 +291,17 @@ void setup() {
 
   displaySerialTime();
 
-  FadeOnBackgnd(R_ed, G_reen, B_lue, 5);
+  fadeOnBackgnd(R_ed, G_reen, B_lue, 5);
   Serial.println(F("Running the Clock.. "));
 }
 
 // <<<<*** LOOP ***>>>>
 void loop() {
+  ArduinoOTA.handle();
+
   if (stopTime == false) {
     timeOperations();
   }
-
   // Set all LEDs to the background color during OTA updates
   if (stopTime == true) {
     for (int k = 0; k <= NUMPIXELS; k ++) {
@@ -332,20 +337,6 @@ void timeOperations() {
   // ********************
   //      Time Stuff
   // ********************
-
-  // Brighten the strip morning
-  if (now.hour() == 4) brightness = constrain(map(now.minute(), 0, 59, MIN_BRIGHTNESS, 127), MIN_BRIGHTNESS, 127);
-  if (now.hour() == 5) brightness = constrain(map(now.minute(), 0, 59, 127, 255), 127, 255);
-
-  // Dim the strip in the evening
-  if (now.hour() == 16) brightness = constrain(map(now.minute(), 0, 59, 255, 127), 255, 127);
-  if (now.hour() == 17) brightness = constrain(map(now.minute(), 0, 59, 127, MIN_BRIGHTNESS), 127, MIN_BRIGHTNESS);
-
-  if (old_brightness != brightness) {
-    old_brightness = brightness;
-    Serial.print("Setting the brightness to " + brightness);
-    strip.setBrightness(brightness);
-  }
 
   // Map and set the fading minute colors
   mf = map(s, 0, NUMPIXELS - 1, G_reen, 255);
@@ -408,7 +399,7 @@ void timeOperations() {
     // Set the LEDs
     strip.show();
     // Change the ms delay for secs to match the LEDs
-    delay((float)778.0 / NUMPIXELS);
+    delay(TIMEDELAY / NUMPIXELS);
 
     // Setting the LED and background colors after a specific delay
     // Set the ms to the background color
@@ -454,6 +445,7 @@ void timeOperations() {
       else strip.setPixelColor(m + 1, strip.Color(MH_COLOR));
   }
   strip.show();  // Set the LEDs
+  set_Brightness();
 }
 
 void hourchime(uint8_t wait) {
@@ -501,9 +493,36 @@ void hourchime(uint8_t wait) {
     }
   }
   Serial.println();
-  Serial.println(F("Go fade on the background and run the clock (end of chime)"));
+  Serial.println(F("End of chime"));
   Serial.println();
-  FadeOnBackgnd(R_ed, G_reen, B_lue, 5);
+  fadeOnBackgnd(R_ed, G_reen, B_lue, 5);
+}
+
+void set_Brightness() {
+  DateTime now = RTC.now();
+  // Brighten the strip morning
+  if (now.hour() == MORNING && OM != now.minute()) {
+    brightness = map(now.minute(), 0, 59, MIN_BRIGHTNESS, 127);
+    Serial.print(F("Adjusting first morning brightness: "));
+    Serial.println(brightness);
+  }
+  if (now.hour() == MORNING + 1 && OM != now.minute()) {
+    brightness = map(now.minute(), 0, 59, 127, 255);
+    Serial.print(F("Adjusting second morning brightness: "));
+    Serial.println(brightness);
+  }
+  // Dim the strip in the evening
+  if (now.hour() == EVENING && OM != now.minute()) {
+    brightness = map(now.minute(), 0, 59, 255, 127);
+    Serial.print(F("Adjusting first evening brightness: "));
+    Serial.println(brightness);
+  }
+  if (now.hour() == EVENING + 1 && OM != now.minute() ) {
+    brightness = map(now.minute(), 0, 59, 127, MIN_BRIGHTNESS);
+    Serial.print(F("Adjusting second evening brightness: "));
+    Serial.println(brightness);
+  }
+  OM = now.minute();
 }
 
 void digitalClockDisplay() {
@@ -523,6 +542,17 @@ void digitalClockDisplay() {
     Serial.print(F("Adjustment done »---> "));
     rtcTime();
   }
+
+  if (old_brightness != brightness) {
+    old_brightness = brightness;
+    Serial.print("Setting the brightness to " + brightness);
+    strip.setBrightness(brightness);
+  }
+
+  Serial.print(F("old_brightness: "));
+  Serial.print(old_brightness);
+  Serial.print(F(" vs brightness: "));
+  Serial.println(brightness);
 
   m = now.minute();
   s = now.second();
@@ -553,6 +583,7 @@ void rtcTime() {
   Serial.print((RTCtemp * 9 / 5) + 32);
   Serial.print(F("°F"));
   Serial.println();
+
 }
 
 void ntpTime() {
@@ -610,6 +641,7 @@ time_t getNtpTime() {
     }
   }
   Serial.println(F("No NTP Response :-("));
+  Serial.println();
   return 0;  // Return 0 if unable to get the time
 }
 
@@ -635,7 +667,13 @@ void sendNTPpacket(IPAddress& address) {
   Udp.endPacket();
 }
 
-void FadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
+void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
+  Serial.print(F("Background Colors: "));
+  Serial.print(R_ed);
+  Serial.print(F(" | "));
+  Serial.print(G_reen);
+  Serial.print(F(" | "));
+  Serial.println(B_lue);
   Serial.println(F("Fading on the background..."));
 
   for (uint8_t b = 0; b < 255; b++) {
@@ -662,9 +700,9 @@ void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   }
 }
 
-void FadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8_t end_red, uint8_t end_green, uint8_t end_blue, uint8_t wait) {
+void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8_t end_red, uint8_t end_green, uint8_t end_blue, uint8_t wait) {
   Serial.println();
-  Serial.println(F("Fading on the background..."));
+  Serial.println(F("Fading color of the background..."));
 
   uint8_t b = (start_red + start_green + start_blue) / 3;
   uint8_t c = (end_red + end_green + end_blue) / 3;
@@ -797,18 +835,14 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
   while (true) {
     for (uint8_t j = 0; j < 256; j++) {
       for (uint16_t i = 0; i < NUMPIXELS; i++) {
-        if ((i >= tail && i <= head) || (tail > head && i >= tail) || (tail > head && i <= head)) {
+        if ((i >= tail && i <= head) || (tail > head && i >= tail) || (tail > head && i <= head))
           strip.setPixelColor(i, strip.Color(MS_COLOR));
-        } else {
-          strip.setPixelColor(i, Wheel(((i * 256 / NUMPIXELS) + j) & 255));
-        }
+        else strip.setPixelColor(i, Wheel(((i * 256 / NUMPIXELS) + j) & 255));
       }
       if (millis() - previousWhiteMillis > whiteSpeed) {
         head++;
         tail++;
-        if (head == NUMPIXELS) {
-          loopNum++;
-        }
+        if (head == NUMPIXELS) loopNum++;
         previousWhiteMillis = millis();
       }
       if (loopNum == loops) return;
@@ -855,7 +889,7 @@ void weather() {
   jsonBuffer = httpGETRequest(serverPath.c_str());
   JSONVar myObject = JSON.parse(jsonBuffer);
   double temperature_K = (myObject["main"]["temp"]);
-  Serial.println(F(" *K"));
+  Serial.println(F(" °K"));
 
   if (JSON.typeof(myObject) == "undefined") {
     Serial.println(F("Parsing input failed!"));
@@ -889,7 +923,7 @@ void weather() {
     temperature = temperature_K;  // K = K
     R_ed = constrain(map(temperature, 255.372, 310.928, 0, 70), 0, 255);
     B_lue = constrain(map(temperature, 255.372, 310.928, 70, 0), 0, 255);
-    Serial.print(F(" °K"));
+    Serial.println(F(" °K"));
   }
 
   // Let's lighten up things if there is a good temp
@@ -901,17 +935,28 @@ void weather() {
     B_lue = 10;
   }
 
-  Serial.print(F(" | Background value: "));
-  Serial.print(F("Red value: "));
+  Serial.print(F("old_Background value -  "));
+  Serial.print(F("Red: "));
+  Serial.print(OR);
+  Serial.print(F(" | "));
+  Serial.print(F("Green: "));
+  Serial.print(OG);
+  Serial.print(F(" | "));
+  Serial.print(F("Blue: "));
+  Serial.println(OB);
+
+  Serial.print(F("Background value -  "));
+  Serial.print(F("Red: "));
   Serial.print(R_ed);
   Serial.print(F(" | "));
-  Serial.print(F("Green value: "));
+  Serial.print(F("Green: "));
   Serial.print(G_reen);
   Serial.print(F(" | "));
-  Serial.print(F("Blue value: "));
+  Serial.print(F("Blue: "));
   Serial.println(B_lue);
 
-  FadeColor(OR, OG, OB, R_ed, G_reen, B_lue, 10);
+  if ((OR + OG + OB) != (R_ed + G_reen + B_lue))
+    fadeColor(OR, OG, OB, R_ed, G_reen, B_lue, 10);
 }
 
 // *************************
@@ -953,23 +998,22 @@ void displaySerialTime() {
 
 void timedtasks(void* parameter) {
   for (;;) {
-    otaBeat();
+    heartBeat();
     clockInterval();
     weatherInterval();
     ntpInterval();
   }
 }
 
-// OTA_beat of the system and OTA handling
-void otaBeat() {
-  if ((millis() - previousOTAbeatMillis) >= OTAUpdate) {
-    previousOTAbeatMillis = millis();
-    if (OTA_beat == LOW)
-      OTA_beat = HIGH;
+// heartbeat of the system
+void heartBeat() {
+  if ((millis() - previousHeartbeatMillis) >= heartUpdate) {
+    previousHeartbeatMillis = millis();
+    if (heartbeat == LOW)
+      heartbeat = HIGH;
     else
-      OTA_beat = LOW;
-    digitalWrite(OTA_beatLED, OTA_beat);
-    ArduinoOTA.handle();
+      heartbeat = LOW;
+    digitalWrite(heartbeatLED, heartbeat);
   }
 }
 
