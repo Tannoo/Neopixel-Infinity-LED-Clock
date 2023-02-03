@@ -4,10 +4,9 @@
  *  - Over the air update capability
  *  - Nation Time Protocol server polling to update the RTC
  *  - Real Time Clock for accurate time keeping 
- *  - Weather polling for current temperature to set the background color (need to supply API key)
+ *  - Weather polling for current temperature to set the background color
  *  - Strip brightness dims over the evening hours and brightens over the morning hours
  *  - OTA updates stop the time operations and sets strip from green to red on progress
- *  - OTA default passcode is 0000
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
@@ -21,7 +20,7 @@ bool heartbeat = LOW;
 // ******************************
 #include <TimeLib.h>  // For Date/Time operations - Time library by Michael Margolis v1.6.1
 bool stopTime = false; // OTA purpose
-#define TIMEDELAY 889.0
+#define TIMEDELAY 895.0
 
 // >>>>>>> WIFI libraries <<<<<<<
 // ******************************
@@ -83,10 +82,11 @@ String jsonBuffer;
 #define NUMPIXELS 60
 #define NEOPIXEL_TYPE NEO_GRBW
 
-#define MORNING 5
-#define EVENING 17
+#define MORNING 6  // Jan » 7:21am // Jun » 5:34am
+#define EVENING 16 // Jan » 4:46pm // Jun » 8:21pm
 #define MIN_BRIGHTNESS 50
 uint8_t brightness;
+uint16_t sunrise = MORNING, sunset = EVENING;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
@@ -134,7 +134,7 @@ uint8_t ms, s, m, mf, hf, h, hr;
 uint8_t oldsec, old_mf, oldmin, old_hf, old_hr;
 uint8_t m_backgnd_fade, h_backgnd_fade;
 uint8_t oldm_backgnd_fade, oldh_backgnd_fade;
-uint8_t old_brightness;
+uint8_t old_brightness, OM;
 
 #define H_COLOR hf, h_backgnd_fade, h_backgnd_fade
 #define OLD_H_COLOR old_hf, oldh_backgnd_fade, oldh_backgnd_fade
@@ -210,7 +210,7 @@ void setup() {
 
   // >>>>>>> Start OTA Stuff <<<<<<<
   // *******************************
-  ArduinoOTA.setPassword("0000");  // OTA password
+  ArduinoOTA.setPassword("****");  // OTA password
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -283,7 +283,7 @@ void setup() {
   DateTime now = RTC.now();
   Serial.print(F("now.hour(): "));
   Serial.print(now.hour());
-  if (now.hour() >= EVENING + 1 || now.hour() <= MORNING - 1) brightness = MIN_BRIGHTNESS;
+  if (now.hour() >= sunset + 1 || now.hour() <= sunrise - 1) brightness = MIN_BRIGHTNESS;
   else brightness = 255;
   Serial.print(F(" - Setting the brightness to "));
   Serial.println(brightness);
@@ -501,23 +501,23 @@ void hourchime(uint8_t wait) {
 void set_Brightness() {
   DateTime now = RTC.now();
   // Brighten the strip morning
-  if (now.hour() == MORNING && OM != now.minute()) {
+  if (now.hour() == sunrise && OM != now.minute()) {
     brightness = map(now.minute(), 0, 59, MIN_BRIGHTNESS, 127);
     Serial.print(F("Adjusting first morning brightness: "));
     Serial.println(brightness);
   }
-  if (now.hour() == MORNING + 1 && OM != now.minute()) {
+  if (now.hour() == sunrise + 1 && OM != now.minute()) {
     brightness = map(now.minute(), 0, 59, 127, 255);
     Serial.print(F("Adjusting second morning brightness: "));
     Serial.println(brightness);
   }
   // Dim the strip in the evening
-  if (now.hour() == EVENING && OM != now.minute()) {
+  if (now.hour() == sunset && OM != now.minute()) {
     brightness = map(now.minute(), 0, 59, 255, 127);
     Serial.print(F("Adjusting first evening brightness: "));
     Serial.println(brightness);
   }
-  if (now.hour() == EVENING + 1 && OM != now.minute() ) {
+  if (now.hour() == sunset + 1 && OM != now.minute() ) {
     brightness = map(now.minute(), 0, 59, 127, MIN_BRIGHTNESS);
     Serial.print(F("Adjusting second evening brightness: "));
     Serial.println(brightness);
@@ -536,23 +536,22 @@ void digitalClockDisplay() {
     Serial.print(now.minute());
     Serial.print(F(" vs NTP (m): "));
     Serial.println(minute());
-    //Serial.println(F("Updating the RTC from NTP time has been disabled due to inconsistant time from NTP."));
     Serial.println(F("Updating the RTC from NTP time"));
     RTC.adjust(DateTime(year(), month(), day(), hour(), minute(), second()));
     Serial.print(F("Adjustment done »---> "));
     rtcTime();
   }
 
+  Serial.print(F("old_brightness: "));
+  Serial.print(old_brightness);
+  Serial.print(F(" vs brightness: "));
+  Serial.println(brightness);
+
   if (old_brightness != brightness) {
     old_brightness = brightness;
     Serial.print("Setting the brightness to " + brightness);
     strip.setBrightness(brightness);
   }
-
-  Serial.print(F("old_brightness: "));
-  Serial.print(old_brightness);
-  Serial.print(F(" vs brightness: "));
-  Serial.println(brightness);
 
   m = now.minute();
   s = now.second();
@@ -667,7 +666,7 @@ void sendNTPpacket(IPAddress& address) {
 }
 
 void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
-  Serial.print(F("Background Colors: "));
+  Serial.print(F("Background Color: "));
   Serial.print(R_ed);
   Serial.print(F(" | "));
   Serial.print(G_reen);
@@ -878,6 +877,24 @@ uint8_t blue(uint32_t c) {
   return (c);
 }
 
+// This is taken straight out of the RTClib.c file from the RTClib library
+// Needed the date2days function and am unsure on how to make it a DateTime call
+// *****************************************************************************
+const uint8_t daysInMonth [] PROGMEM = { 31,28,31,30,31,30,31,31,30,31,30,31 }; //has to be const or compiler compaints
+
+// number of days since 2000/01/01, valid for 2001..2099
+static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
+    if (y >= 2000)
+        y -= 2000;
+    uint16_t days = d;
+    for (uint8_t i = 1; i < m; ++i)
+        days += pgm_read_byte(daysInMonth + i - 1);
+    if (m > 2 && y % 4 == 0)
+        ++days;
+    return days + 365 * y + (y + 3) / 4 - 1;
+}
+// *****************************************************************************
+
 void weather() {
   uint8_t OR = R_ed, OG = G_reen, OB = B_lue;
   displaySerialTime();
@@ -887,8 +904,64 @@ void weather() {
   Serial.println();
   jsonBuffer = httpGETRequest(serverPath.c_str());
   JSONVar myObject = JSON.parse(jsonBuffer);
-  double temperature_K = (myObject["main"]["temp"]);
-  Serial.println(F(" °K"));
+  uint16_t temperature_K = (myObject["main"]["temp"]);
+  //uint32_t sr = (myObject["sys"]["sunrise"]);
+  //uint32_t ss = (myObject["sys"]["sunset"]);
+
+  //uint32_t epochTime = now.unixtime();
+  //Serial.print(F("Epoch Time: "));
+  //Serial.println(epochTime);
+
+  /*
+  // Calculate sunrise hour
+  if (epochTime < sr) sunrise = round((sr - epochTime) / 3600 + 2);
+  else sunrise = round((epochTime - sr) / 3600 + 2);
+
+  // Calculate sunset hour
+  if (epochTime < ss) sunset = round((ss - epochTime) / 3600 + 10);
+  else sunset = round((epochTime - ss) / 3600 + 10);
+  */
+
+  DateTime now = RTC.now();
+
+  uint16_t dayNumber1 = date2days(now.year(), now.month(), now.day()) - date2days(now.year(), 1, 1);
+  Serial.println();
+  Serial.print(F("Days from 1/1/2023 to now: "));
+  Serial.println(dayNumber1);
+
+  uint16_t dayNumber = date2days(now.year(), 12, 31) - date2days(now.year(), now.month(), now.day());
+  Serial.println();
+  Serial.print(F("Days left from 1/1/2023 to 12/31/"));
+  Serial.print(now.year());
+  Serial.print(F(": "));
+  Serial.println(dayNumber);
+
+  uint8_t sunriseMod, sunsetMod;
+
+  // Calculate the sunrise/sunset offset during first half of the year
+  if (dayNumber >= 181 && dayNumber <= 365) {
+    sunriseMod = constrain(map(dayNumber, 365, 181, 0, 3), 0, 3);
+    sunsetMod  = constrain(map(dayNumber, 365, 181, 0, 4), 0, 4);
+  }
+  // Calculate the sunrise/sunset offset during the second half of the year
+  if (dayNumber >= 0 && dayNumber <= 180) {
+    sunriseMod = constrain(map(dayNumber, 180, 0, 3, 0), 0, 3);
+    sunsetMod  = constrain(map(dayNumber, 180, 0, 4, 0), 0, 4);
+  }
+  // Calculate sunrise hour
+  sunrise = MORNING - sunriseMod;
+  // Calculate sunset hour
+  sunset  = EVENING + sunsetMod;
+
+  Serial.println();
+  Serial.print(F("Sunrise Mod: "));
+  Serial.print(sunriseMod);
+  Serial.print(F(" | Sunrise hour: "));
+  Serial.println(sunrise);
+  Serial.print(F("Sunset  Mod: "));
+  Serial.print(sunsetMod);
+  Serial.print(F(" | Sunset  hour: "));
+  Serial.println(sunset);
 
   if (JSON.typeof(myObject) == "undefined") {
     Serial.println(F("Parsing input failed!"));
@@ -899,9 +972,9 @@ void weather() {
   Serial.print(F("JSON object = "));
   Serial.println(myObject);
   Serial.println(F("****************"));
-  Serial.println(F("extracted from JSON object:"));
+  Serial.println(F("Extracted from JSON object:"));
   Serial.print(F("Temperature: "));
-  Serial.print(myObject["main"]["temp"]);
+  Serial.print(temperature_K);
   Serial.println(F(" °K"));
 
   // Scale the temperature to the red and blue colors
