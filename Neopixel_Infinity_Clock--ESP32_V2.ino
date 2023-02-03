@@ -905,30 +905,16 @@ void weather() {
   jsonBuffer = httpGETRequest(serverPath.c_str());
   JSONVar myObject = JSON.parse(jsonBuffer);
   uint16_t temperature_K = (myObject["main"]["temp"]);
-  //uint32_t sr = (myObject["sys"]["sunrise"]);
-  //uint32_t ss = (myObject["sys"]["sunset"]);
-
-  //uint32_t epochTime = now.unixtime();
-  //Serial.print(F("Epoch Time: "));
-  //Serial.println(epochTime);
-
-  /*
-  // Calculate sunrise hour
-  if (epochTime < sr) sunrise = round((sr - epochTime) / 3600 + 2);
-  else sunrise = round((epochTime - sr) / 3600 + 2);
-
-  // Calculate sunset hour
-  if (epochTime < ss) sunset = round((ss - epochTime) / 3600 + 10);
-  else sunset = round((epochTime - ss) / 3600 + 10);
-  */
 
   DateTime now = RTC.now();
 
-  uint16_t dayNumber1 = date2days(now.year(), now.month(), now.day()) - date2days(now.year(), 1, 1);
-  Serial.println();
-  Serial.print(F("Days from 1/1/2023 to now: "));
-  Serial.println(dayNumber1);
+  // Calculate the day number of the year
+  //uint16_t dayNumber1 = date2days(now.year(), now.month(), now.day()) - date2days(now.year(), 1, 1);
+  //Serial.println();
+  //Serial.print(F("Days from 1/1/2023 to now: "));
+  //Serial.println(dayNumber1);
 
+  // Calculate the days left in the year
   uint16_t dayNumber = date2days(now.year(), 12, 31) - date2days(now.year(), now.month(), now.day());
   Serial.println();
   Serial.print(F("Days left from 1/1/2023 to 12/31/"));
