@@ -975,7 +975,7 @@ void weather() {
   Serial.println(F("Extracted from JSON object:"));
   Serial.print(F("Temperature: "));
   Serial.print(temperature_K);
-  Serial.println(F(" °K"));
+  Serial.println(F("°K"));
 
   // Scale the temperature to the red and blue colors
   Serial.print(F("Temperature: "));
@@ -985,17 +985,17 @@ void weather() {
     temperature = (temperature_K - 273.15) * 9 / 5 + 32;  // F = (K - 273.15) * 9/5 + 32;
     R_ed = constrain(map(temperature, 0, 100, 0, 70), 0, 255);
     B_lue = constrain(map(temperature, 0, 100, 70, 0), 0, 255);
-    Serial.print(F(" °F"));
+    Serial.println(F("°F"));
   } else if (temp_units == "metric") {
     temperature = temperature_K - 273.15;  // C = K - 273
     R_ed = constrain(map(temperature, -17, 38, 0, 70), 0, 255);
     B_lue = constrain(map(temperature, -17, 38, 70, 0), 0, 255);
-    Serial.print(F(" °C"));
+    Serial.println(F("°C"));
   } else {
     temperature = temperature_K;  // K = K
     R_ed = constrain(map(temperature, 255.372, 310.928, 0, 70), 0, 255);
     B_lue = constrain(map(temperature, 255.372, 310.928, 70, 0), 0, 255);
-    Serial.println(F(" °K"));
+    Serial.println(F("°K"));
   }
 
   // Let's lighten up things if there is a good temp
@@ -1007,6 +1007,7 @@ void weather() {
     B_lue = 10;
   }
 
+  Serial.println();
   Serial.print(F("old_Background value -  "));
   Serial.print(F("Red: "));
   Serial.print(OR);
