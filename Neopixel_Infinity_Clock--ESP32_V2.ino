@@ -83,7 +83,7 @@ String jsonBuffer;
 #define NEOPIXEL_TYPE NEO_GRBW
 
 #define MORNING 6  // Jan » 7:21am // Jun » 5:34am
-#define EVENING 16 // Jan » 4:46pm // Jun » 8:21pm
+#define EVENING 18 // Jan » 4:46pm // Jun » 8:21pm
 #define MIN_BRIGHTNESS 50
 uint8_t brightness;
 uint16_t sunrise = MORNING, sunset = EVENING;
@@ -906,6 +906,11 @@ void weather() {
   JSONVar myObject = JSON.parse(jsonBuffer);
   uint16_t temperature_K = (myObject["main"]["temp"]);
 
+  if (JSON.typeof(myObject) == "undefined") {
+    Serial.println(F("Parsing input failed!"));
+    return;
+  }
+
   DateTime now = RTC.now();
 
   // Calculate the day number of the year
@@ -949,10 +954,6 @@ void weather() {
   Serial.print(F(" | Sunset  hour: "));
   Serial.println(sunset);
 
-  if (JSON.typeof(myObject) == "undefined") {
-    Serial.println(F("Parsing input failed!"));
-    return;
-  }
   Serial.println();
   Serial.println(F("****************"));
   Serial.print(F("JSON object = "));
