@@ -5,7 +5,7 @@
  *  - Nation Time Protocol server polling to update the RTC
  *  - Real Time Clock for accurate time keeping 
  *  - Weather polling for current temperature to set the background color
- *  - Strip brightness dims over the evening hours and brightens over the morning hours
+ *  - Strip brightness dims over the sunset time and brightens over the sunrise time
  *  - OTA updates stop the time operations and sets strip from green to red on progress
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
@@ -165,6 +165,7 @@ byte packetBuffer[NTP_PACKET_SIZE];
 WiFiUDP Udp;
 time_t getNtpTime();
 
+
 // <<<<*** SETUP ***>>>>
 void setup() {
 
@@ -230,7 +231,13 @@ void setup() {
     R_ed   = map(progress / (total / 100), 0, 100, 255, 0);
     G_reen = map(progress / (total / 100), 0, 100, 0, 255);
     B_lue  = 0;
+    // Set all LEDs to the background color during OTA updates
+    for (int k = 0; k <= NUMPIXELS; k ++) {
+      strip.setPixelColor(k, strip.Color(BACKGND));
+    }
+    strip.show();  // Set the LEDs
   });
+
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
     if (error == OTA_AUTH_ERROR) Serial.println(F("Auth Failed"));
@@ -295,21 +302,15 @@ void setup() {
   Serial.println(F("Running the Clock.. "));
 }
 
+
 // <<<<*** LOOP ***>>>>
 void loop() {
   ArduinoOTA.handle();
 
-  if (stopTime == false) {
-    timeOperations();
-  }
-  // Set all LEDs to the background color during OTA updates
-  if (stopTime == true) {
-    for (int k = 0; k <= NUMPIXELS; k ++) {
-      strip.setPixelColor(k, strip.Color(BACKGND));
-    }
-    strip.show();  // Set the LEDs
-  }
+  if (stopTime == false) timeOperations();
 }
+// <<<<*** END LOOP ***>>>>
+
 
 void timeOperations() {
   oldmin = m;
@@ -448,6 +449,7 @@ void timeOperations() {
   set_Brightness();
 }
 
+
 void hourchime(uint8_t wait) {
   old_hr = hr;
   Serial.print(F("Hour Chimes.. "));
@@ -458,18 +460,19 @@ void hourchime(uint8_t wait) {
     if (m > 1) Serial.print(F(" - "));
     Serial.print(m);
     for (uint16_t i = 0; i <= NUMPIXELS - 1; i++) {
-      if (m == 1) strip.setPixelColor(i, PSTR(strip.Color(255, 0, 0, 0)));       // Red
-      if (m == 2) strip.setPixelColor(i, PSTR(strip.Color(255, 0, 0, 255)));     // LT Red
-      if (m == 3) strip.setPixelColor(i, PSTR(strip.Color(255, 255, 0, 0)));     // Yellow
-      if (m == 4) strip.setPixelColor(i, PSTR(strip.Color(0, 255, 0, 0)));       // Green
-      if (m == 5) strip.setPixelColor(i, PSTR(strip.Color(0, 255, 0, 255)));     // LT Green
-      if (m == 6) strip.setPixelColor(i, PSTR(strip.Color(0, 255, 255, 0)));     // Teal
-      if (m == 7) strip.setPixelColor(i, PSTR(strip.Color(0, 0, 255, 0)));       // Blue
-      if (m == 8) strip.setPixelColor(i, PSTR(strip.Color(0, 0, 255, 255)));     // LT Blue
-      if (m == 9) strip.setPixelColor(i, PSTR(strip.Color(255, 0, 255, 0)));     // Purple
-      if (m == 10) strip.setPixelColor(i, PSTR(strip.Color(MS_COLOR)));          // RGB White
-      if (m == 11) strip.setPixelColor(i, PSTR(strip.Color(255, 0, 255, 255)));  // LT Purple
-      if (m == 12) strip.setPixelColor(i, PSTR(strip.Color(0, 255, 255, 255)));  // LT Teal
+      uint8_t j = 255;
+      if (m == 1) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR1)));
+      if (m == 2) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR2)));
+      if (m == 3) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR3)));
+      if (m == 4) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR4)));
+      if (m == 5) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR5)));
+      if (m == 6) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR6)));
+      if (m == 7) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR7)));
+      if (m == 8) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR8)));
+      if (m == 9) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR9)));
+      if (m == 10) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR10)));
+      if (m == 11) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR11)));
+      if (m == 12) strip.setPixelColor(i, PSTR(strip.Color(CHCOLOR12)));
     }
     strip.show();
     delay(wait);
@@ -498,6 +501,7 @@ void hourchime(uint8_t wait) {
   fadeOnBackgnd(R_ed, G_reen, B_lue, 5);
 }
 
+
 void set_Brightness() {
   DateTime now = RTC.now();
   // Brighten the strip morning
@@ -524,6 +528,7 @@ void set_Brightness() {
   }
   OM = now.minute();
 }
+
 
 void digitalClockDisplay() {
   now();
@@ -560,6 +565,7 @@ void digitalClockDisplay() {
   oldsec = s;
 }
 
+
 void rtcTime() {
   DateTime now = RTC.now();
   RTCtemp = RTC.getTemperature();
@@ -584,6 +590,7 @@ void rtcTime() {
   Serial.println();
 }
 
+
 void ntpTime() {
   // NTP Time
   now();
@@ -602,6 +609,7 @@ void ntpTime() {
   Serial.println();
 }
 
+
 void printDigits(int digits) {
   // utility for digital clock display: prints preceding colon and leading 0
   if (digits < 10)
@@ -610,6 +618,7 @@ void printDigits(int digits) {
 }
 
 uint32_t NTPOffset = (NTPDayOffset * 86400) + (NTPHourOffset * 3600);
+
 
 time_t getNtpTime() {
   IPAddress ntpServerIP;  // NTP server's ip address
@@ -643,6 +652,7 @@ time_t getNtpTime() {
   return 0;  // Return 0 if unable to get the time
 }
 
+
 // Send an NTP request to the time server at the given address
 void sendNTPpacket(IPAddress& address) {
   // Set all bytes in the buffer to 0
@@ -665,6 +675,7 @@ void sendNTPpacket(IPAddress& address) {
   Udp.endPacket();
 }
 
+
 void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   Serial.print(F("Background Color: "));
   Serial.print(R_ed);
@@ -685,6 +696,7 @@ void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   }
 }
 
+
 void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   Serial.println();
   Serial.println(F("Fading off the background..."));
@@ -697,6 +709,7 @@ void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
     delay(wait);
   }
 }
+
 
 void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8_t end_red, uint8_t end_green, uint8_t end_blue, uint8_t wait) {
   Serial.println();
@@ -822,6 +835,7 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
   }
 }
 
+
 void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
   if (whiteLength >= NUMPIXELS) whiteLength = NUMPIXELS - 1;
   uint8_t head = whiteLength - 1;
@@ -851,6 +865,7 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
     }
   }
 }
+
 
 // Input a value 0 to 255 to get a color value
 // The colours are a transition r - g - b - back to r
@@ -894,6 +909,7 @@ static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
     return days + 365 * y + (y + 3) / 4 - 1;
 }
 // *****************************************************************************
+
 
 void weather() {
   uint8_t OR = R_ed, OG = G_reen, OB = B_lue;
@@ -1019,6 +1035,7 @@ void weather() {
     fadeColor(OR, OG, OB, R_ed, G_reen, B_lue, 10);
 }
 
+
 // *************************
 //  http GET request module
 // *************************
@@ -1044,6 +1061,7 @@ String httpGETRequest(const char* serverName) {
   return payload;
 }
 
+
 void displaySerialTime() {
   Serial.println();
   Serial.println(F("          ******************** "));
@@ -1056,6 +1074,7 @@ void displaySerialTime() {
   Serial.println(F("          ******************** "));
 }
 
+
 void timedtasks(void* parameter) {
   for (;;) {
     heartBeat();
@@ -1064,6 +1083,7 @@ void timedtasks(void* parameter) {
     ntpInterval();
   }
 }
+
 
 // heartbeat of the system
 void heartBeat() {
@@ -1077,6 +1097,7 @@ void heartBeat() {
   }
 }
 
+
 // Clock time interval
 void clockInterval() {
   if ((millis() - previousTimeMillis) >= timeUpdate) {
@@ -1088,6 +1109,7 @@ void clockInterval() {
   }
 }
 
+
 // Weather time interval
 void weatherInterval() {
   if ((millis() - previousWeatherMillis) > weatherUpdate) {
@@ -1097,6 +1119,7 @@ void weatherInterval() {
     previousWeatherMillis = millis();
   }
 }
+
 
 // NTP time interval
 void ntpInterval() {
