@@ -87,7 +87,6 @@ String jsonBuffer;
 #define MIN_BRIGHTNESS 50
 uint8_t brightness;
 uint16_t sunrise = MORNING, sunset = EVENING;
-bool wipe;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
