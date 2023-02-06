@@ -87,6 +87,7 @@ String jsonBuffer;
 #define MIN_BRIGHTNESS 50
 uint8_t brightness;
 uint16_t sunrise = MORNING, sunset = EVENING;
+bool wipe;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
@@ -170,14 +171,9 @@ time_t getNtpTime();
 void setup() {
 
   // Creating the task for the other core
-  xTaskCreatePinnedToCore(
-    timedtasks,  // Function to implement the task
-    "timers",    // Name of the task
-    10000,       // Stack size in words
-    NULL,        // Task input parameter
-    0,           // Priority of the task
-    &timers,     // Task handle
-    0);          // Core where the task should run
+    // Function to implement the task, name of the task, stack size in words,
+    // task input parameter, priority of the task, task handle, and core where the task should run
+  xTaskCreatePinnedToCore(timedtasks, "timers", 10000, NULL, 0, &timers, 0);
 
   // Generate random seed
   uint32_t seed = 0;
@@ -231,11 +227,12 @@ void setup() {
     R_ed   = map(progress / (total / 100), 0, 100, 255, 0);
     G_reen = map(progress / (total / 100), 0, 100, 0, 255);
     B_lue  = 0;
-    // Set all LEDs to the background color during OTA updates
-    for (int k = 0; k <= NUMPIXELS; k ++) {
-      strip.setPixelColor(k, strip.Color(BACKGND));
-    }
-    strip.show();  // Set the LEDs
+    // Set LED to the background color during OTA updates
+    uint8_t x = constrain(map(progress / (total / 100), 0, 100, 0, NUMPIXELS - 1), 0, NUMPIXELS - 1);
+    strip.setPixelColor(x, strip.Color(BACKGND));
+    for (uint8_t y = x + 1; y < NUMPIXELS; y ++)
+      strip.setPixelColor(y, strip.Color(0, 0, 0, 10));
+    strip.show();  // Set the LED
   });
 
   ArduinoOTA.onError([](ota_error_t error) {
@@ -307,7 +304,8 @@ void setup() {
 void loop() {
   ArduinoOTA.handle();
 
-  if (stopTime == false) timeOperations();
+  if (stopTime == false)
+    timeOperations();
 }
 // <<<<*** END LOOP ***>>>>
 
@@ -722,52 +720,42 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
     for (uint8_t b = b; b < c; b++) {
       if (h > 0 && m > 0 && s > 0) {  // If all are above 0, then start at zero
         if (s < h && s < m) {
-          for (uint8_t l = 0; l < s; l++) {  // 0 --> s
+          for (uint8_t l = 0; l < s; l++) // 0 --> s
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
         if (m < h && m < s) {
-          for (uint8_t l = 0; l < m; l++) {  // 0 --> m
+          for (uint8_t l = 0; l < m; l++) // 0 --> m
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
         if (h < m && h < s) {
-          for (uint8_t l = 0; l < h; l++) {  // 0 --> h
+          for (uint8_t l = 0; l < h; l++) // 0 --> h
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
       }
       if (s < m && s < h) {
         if (m < h) {
-          for (uint8_t l = s + 1; l < m; l++) {  // (s + 1) --> m
+          for (uint8_t l = s + 1; l < m; l++) // (s + 1) --> m
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
         if (h < m) {
-          for (uint8_t l = s + 1; l < h; l++) {  // (s + 1) --> h
+          for (uint8_t l = s + 1; l < h; l++) // (s + 1) --> h
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
       }
       if (m < h) {
-        for (uint8_t l = m + 2; l < h; l++) {  // (m + 2) --> h
+        for (uint8_t l = m + 2; l < h; l++) // (m + 2) --> h
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
-        for (uint8_t l = h + 2; l < NUMPIXELS; l++) {  // (h + 2) --> NUMPIXELS
+        for (uint8_t l = h + 2; l < NUMPIXELS; l++) // (h + 2) --> NUMPIXELS
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
       }
       if (h < m) {
-        for (uint8_t l = h + 2; l < m; l++) {  // (h + 2) --> m
+        for (uint8_t l = h + 2; l < m; l++) // (h + 2) --> m
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
-        for (uint8_t l = m + 2; l < NUMPIXELS; l++) {  // (m + 2) --> NUMPIXELS
+        for (uint8_t l = m + 2; l < NUMPIXELS; l++) // (m + 2) --> NUMPIXELS
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
       } else {
-        for (uint8_t l = s + 1; l < NUMPIXELS; l++) {  // (s + 1) --> NUMPIXELS
+        for (uint8_t l = s + 1; l < NUMPIXELS; l++) // (s + 1) --> NUMPIXELS
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
       }
       // Let's put all this into affect so we can see the effect
       strip.show();
@@ -779,52 +767,42 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
     for (uint8_t b = b; b > c; b--) {
       if (h > 0 && m > 0 && s > 0) {  // If all are above 0, then start at zero
         if (s < h && s < m) {
-          for (uint8_t l = 0; l < s; l++) {  // 0 --> s
+          for (uint8_t l = 0; l < s; l++) // 0 --> s
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
         if (m < h && m < s) {
-          for (uint8_t l = 0; l < m; l++) {  // 0 --> m
+          for (uint8_t l = 0; l < m; l++) // 0 --> m
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
         if (h < m && h < s) {
-          for (uint8_t l = 0; l < h; l++) {  // 0 --> h
+          for (uint8_t l = 0; l < h; l++) // 0 --> h
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
       }
       if (s < m && s < h) {
         if (m < h) {
-          for (uint8_t l = s + 1; l < m; l++) {  // (s + 1) --> m
+          for (uint8_t l = s + 1; l < m; l++) // (s + 1) --> m
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
         if (h < m) {
-          for (uint8_t l = s + 1; l < h; l++) {  // (s + 1) --> h
+          for (uint8_t l = s + 1; l < h; l++) // (s + 1) --> h
             strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-          }
         }
       }
       if (m < h) {
-        for (uint8_t l = m + 2; l < h; l++) {  // (m + 2) --> h
+        for (uint8_t l = m + 2; l < h; l++) // (m + 2) --> h
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
-        for (uint8_t l = h + 2; l < NUMPIXELS; l++) {  // (h + 2) --> NUMPIXELS
+        for (uint8_t l = h + 2; l < NUMPIXELS; l++) // (h + 2) --> NUMPIXELS
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
       }
       if (h < m) {
-        for (uint8_t l = h + 2; l < m; l++) {  // (h + 2) --> m
+        for (uint8_t l = h + 2; l < m; l++) // (h + 2) --> m
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
-        for (uint8_t l = m + 2; l < NUMPIXELS; l++) {  // (m + 2) --> NUMPIXELS
+        for (uint8_t l = m + 2; l < NUMPIXELS; l++) // (m + 2) --> NUMPIXELS
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
       } else {
-        for (uint8_t l = s + 1; l < NUMPIXELS; l++) {  // (s + 1) --> NUMPIXELS
+        for (uint8_t l = s + 1; l < NUMPIXELS; l++) // (s + 1) --> NUMPIXELS
           strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
-        }
       }
       // Let's put all this into affect so we can see the effect
       strip.show();
@@ -899,14 +877,14 @@ const uint8_t daysInMonth [] PROGMEM = { 31,28,31,30,31,30,31,31,30,31,30,31 }; 
 
 // number of days since 2000/01/01, valid for 2001..2099
 static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
-    if (y >= 2000)
-        y -= 2000;
-    uint16_t days = d;
-    for (uint8_t i = 1; i < m; ++i)
-        days += pgm_read_byte(daysInMonth + i - 1);
-    if (m > 2 && y % 4 == 0)
-        ++days;
-    return days + 365 * y + (y + 3) / 4 - 1;
+  if (y >= 2000)
+    y -= 2000;
+  uint16_t days = d;
+  for (uint8_t i = 1; i < m; ++i)
+    days += pgm_read_byte(daysInMonth + i - 1);
+  if (m > 2 && y % 4 == 0)
+    ++days;
+  return days + 365 * y + (y + 3) / 4 - 1;
 }
 // *****************************************************************************
 
