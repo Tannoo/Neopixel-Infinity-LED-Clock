@@ -7,7 +7,6 @@
  *  - Weather polling for current temperature to set the background color
  *  - Strip brightness dims over the sunset time and brightens over the sunrise time
  *  - OTA updates stop the time operations and sets LEDs from green to red on progress
- *  - Default OTA password is 0000
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
@@ -21,7 +20,7 @@ bool heartbeat = LOW;
 // ******************************
 #include <TimeLib.h>  // For Date/Time operations - Time library by Michael Margolis v1.6.1
 bool stopTime = false; // OTA purpose
-#define TIMEDELAY 895.0
+#define TIMEDELAY 899.0
 
 // >>>>>>> WIFI libraries <<<<<<<
 // ******************************
@@ -944,17 +943,17 @@ void weather() {
     Serial.println(F("°K"));
   }
 
-  // Gamma correct the red and blue values
-  R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
-  B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
+  // Gamma correct these values
+  if (R_ed >= 103)  R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
+  if (B_lue >= 103) B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
 
   // Let's lighten up things if there is a good temp
   if (temperature_K >= 200)
-    G_reen = pgm_read_byte(&neopix_gamma[20]);
+    G_reen = 20;
   else {
-    R_ed   = pgm_read_byte(&neopix_gamma[10]);
-    G_reen = pgm_read_byte(&neopix_gamma[10]);
-    B_lue  = pgm_read_byte(&neopix_gamma[10]);
+    R_ed   = 10;
+    G_reen = 10;
+    B_lue  = 10;
   }
 
   Serial.println();
