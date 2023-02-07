@@ -6,7 +6,8 @@
  *  - Real Time Clock for accurate time keeping 
  *  - Weather polling for current temperature to set the background color
  *  - Strip brightness dims over the sunset time and brightens over the sunrise time
- *  - OTA updates stop the time operations and sets strip from green to red on progress
+ *  - OTA updates stop the time operations and sets LEDs from green to red on progress
+ *  - Default OTA password is 0000
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
@@ -90,41 +91,24 @@ uint16_t sunrise = MORNING, sunset = EVENING;
 
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
-byte neopix_gamma[] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
-  2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
-  5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10,
-  10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
-  17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
-  25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
-  37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
-  51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
-  69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
-  90, 92, 93, 95, 96, 98, 99, 101, 102, 104, 105, 107, 109, 110, 112, 114,
-  115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137, 138, 140, 142,
-  144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
-  177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213,
-  215, 218, 220, 223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255
-};
+extern uint8_t neopix_gamma[];
 
-#define CHCOLOR1 neopix_gamma[j], 0, 0                                  // Red
-#define CHCOLOR2 neopix_gamma[j], 0, 0, neopix_gamma[j]                 // Lt. Red
-#define CHCOLOR3 neopix_gamma[j], neopix_gamma[j], 0                    // Yellow
-#define CHCOLOR4 0, neopix_gamma[j], 0                                  // Green
-#define CHCOLOR5 0, neopix_gamma[j], 0, neopix_gamma[j]                 // Lt. Green
-#define CHCOLOR6 0, neopix_gamma[j], neopix_gamma[j]                    // Teal
-#define CHCOLOR7 0, 0, neopix_gamma[j]                                  // Blue
-#define CHCOLOR8 0, 0, neopix_gamma[j], neopix_gamma[j]                 // Lt. Blue
-#define CHCOLOR9 neopix_gamma[j], 0, neopix_gamma[j]                    // Purple
-#define CHCOLOR10 neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]     // RGB White
-#define CHCOLOR11 neopix_gamma[j], 0, neopix_gamma[j], neopix_gamma[j]  // Lt. Purple
-#define CHCOLOR12 0, neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]  // Lt. Teal
+#define CHCOLOR1  neopix_gamma[j],               0,               0                  // Red
+#define CHCOLOR2  neopix_gamma[j],               0,               0, neopix_gamma[j] // Lt. Red
+#define CHCOLOR3  neopix_gamma[j], neopix_gamma[j],               0                  // Yellow
+#define CHCOLOR4                0, neopix_gamma[j],               0                  // Green
+#define CHCOLOR5                0, neopix_gamma[j],               0, neopix_gamma[j] // Lt. Green
+#define CHCOLOR6                0, neopix_gamma[j], neopix_gamma[j]                  // Teal
+#define CHCOLOR7                0,               0, neopix_gamma[j]                  // Blue
+#define CHCOLOR8                0,               0, neopix_gamma[j], neopix_gamma[j] // Lt. Blue
+#define CHCOLOR9  neopix_gamma[j],               0, neopix_gamma[j]                  // Purple
+#define CHCOLOR10 neopix_gamma[j], neopix_gamma[j], neopix_gamma[j]                  // RGB White
+#define CHCOLOR11 neopix_gamma[j],               0, neopix_gamma[j], neopix_gamma[j] // Lt. Purple
+#define CHCOLOR12               0, neopix_gamma[j], neopix_gamma[j], neopix_gamma[j] // Lt. Teal
 
 /*
-  h  = LED positional hour
   hr = RTC base hour
+  h  = LED positional hour
   m  = LED positional minute
   s  = LED positional second
   ms = LED positional millisecond
@@ -164,7 +148,6 @@ byte packetBuffer[NTP_PACKET_SIZE];
 
 WiFiUDP Udp;
 time_t getNtpTime();
-
 
 // <<<<*** SETUP ***>>>>
 void setup() {
@@ -206,7 +189,7 @@ void setup() {
 
   // >>>>>>> Start OTA Stuff <<<<<<<
   // *******************************
-  ArduinoOTA.setPassword("****");  // OTA password
+  ArduinoOTA.setPassword("0000");  // OTA password
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -223,8 +206,10 @@ void setup() {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
     // While uploading, stop the time and change the LEDs from Green to Red
     stopTime = true;
-    R_ed   = map(progress / (total / 100), 0, 100, 255, 0);
-    G_reen = map(progress / (total / 100), 0, 100, 0, 255);
+    R_ed   = map(progress / (total / 100), 0, 100, pgm_read_byte(&neopix_gamma[255]),
+      pgm_read_byte(&neopix_gamma[0]));
+    G_reen = map(progress / (total / 100), 0, 100, pgm_read_byte(&neopix_gamma[0]),
+      pgm_read_byte(&neopix_gamma[255]));
     B_lue  = 0;
     // Set LED to the background color during OTA updates
     uint8_t x = constrain(map(progress / (total / 100), 0, 100, 0, NUMPIXELS - 1), 0, NUMPIXELS - 1);
@@ -278,6 +263,7 @@ void setup() {
   Serial.print(F("Pixel Color Test... "));
   Serial.println(F("White Over Rainbow"));
   whiteOverRainbow(20, 25, 5);
+  // ***********«« End Demo »»**************
 
   Serial.println();
   Serial.println(F("Neopixel Clock..."));
@@ -298,7 +284,6 @@ void setup() {
   Serial.println(F("Running the Clock.. "));
 }
 
-
 // <<<<*** LOOP ***>>>>
 void loop() {
   ArduinoOTA.handle();
@@ -307,7 +292,6 @@ void loop() {
     timeOperations();
 }
 // <<<<*** END LOOP ***>>>>
-
 
 void timeOperations() {
   oldmin = m;
@@ -337,20 +321,28 @@ void timeOperations() {
   // ********************
 
   // Map and set the fading minute colors
-  mf = map(s, 0, NUMPIXELS - 1, G_reen, 255);
-  old_mf = map(s, 0, NUMPIXELS - 1, 255, G_reen);
+  mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
+    pgm_read_byte(&neopix_gamma[255]));
+  old_mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[255]),
+    pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Map and fade the minute backgroud intensities
-  m_backgnd_fade = map(s, 0, NUMPIXELS - 1, G_reen, 0);
-  oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, G_reen);
+  m_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
+    pgm_read_byte(&neopix_gamma[0]));
+  oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[0]),
+    pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Map and set the fading hour colors.
-  hf = map(m, 0, NUMPIXELS - 1, G_reen, 255);
-  old_hf = map(m, 0, NUMPIXELS - 1, 255, G_reen);
+  hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
+    pgm_read_byte(&neopix_gamma[255]));
+  old_hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[255]),
+    pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Map and fade the hour backgroud intensities
-  h_backgnd_fade = map(m, 0, NUMPIXELS - 1, G_reen, 0);
-  oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, G_reen);
+  h_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
+    pgm_read_byte(&neopix_gamma[0]));
+  oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[0]),
+    pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Let's place (set) the LEDs
   for (ms = 0; ms <= NUMPIXELS - 1; ms++) {
@@ -446,7 +438,6 @@ void timeOperations() {
   set_Brightness();
 }
 
-
 void hourchime(uint8_t wait) {
   old_hr = hr;
   Serial.print(F("Hour Chimes.. "));
@@ -498,7 +489,6 @@ void hourchime(uint8_t wait) {
   fadeOnBackgnd(R_ed, G_reen, B_lue, 5);
 }
 
-
 void set_Brightness() {
   DateTime now = RTC.now();
   // Brighten the strip morning
@@ -525,7 +515,6 @@ void set_Brightness() {
   }
   OM = now.minute();
 }
-
 
 void digitalClockDisplay() {
   now();
@@ -562,7 +551,6 @@ void digitalClockDisplay() {
   oldsec = s;
 }
 
-
 void rtcTime() {
   DateTime now = RTC.now();
   RTCtemp = RTC.getTemperature();
@@ -587,7 +575,6 @@ void rtcTime() {
   Serial.println();
 }
 
-
 void ntpTime() {
   // NTP Time
   now();
@@ -606,7 +593,6 @@ void ntpTime() {
   Serial.println();
 }
 
-
 void printDigits(int digits) {
   // utility for digital clock display: prints preceding colon and leading 0
   if (digits < 10)
@@ -615,7 +601,6 @@ void printDigits(int digits) {
 }
 
 uint32_t NTPOffset = (NTPDayOffset * 86400) + (NTPHourOffset * 3600);
-
 
 time_t getNtpTime() {
   IPAddress ntpServerIP;  // NTP server's ip address
@@ -649,7 +634,6 @@ time_t getNtpTime() {
   return 0;  // Return 0 if unable to get the time
 }
 
-
 // Send an NTP request to the time server at the given address
 void sendNTPpacket(IPAddress& address) {
   // Set all bytes in the buffer to 0
@@ -672,7 +656,6 @@ void sendNTPpacket(IPAddress& address) {
   Udp.endPacket();
 }
 
-
 void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   Serial.print(F("Background Color: "));
   Serial.print(R_ed);
@@ -693,7 +676,6 @@ void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   }
 }
 
-
 void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
   Serial.println();
   Serial.println(F("Fading off the background..."));
@@ -706,7 +688,6 @@ void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
     delay(wait);
   }
 }
-
 
 void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8_t end_red, uint8_t end_green, uint8_t end_blue, uint8_t wait) {
   Serial.println();
@@ -812,7 +793,6 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
   }
 }
 
-
 void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
   if (whiteLength >= NUMPIXELS) whiteLength = NUMPIXELS - 1;
   uint8_t head = whiteLength - 1;
@@ -842,7 +822,6 @@ void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
     }
   }
 }
-
 
 // Input a value 0 to 255 to get a color value
 // The colours are a transition r - g - b - back to r
@@ -886,7 +865,6 @@ static uint16_t date2days(uint16_t y, uint8_t m, uint8_t d) {
   return days + 365 * y + (y + 3) / 4 - 1;
 }
 // *****************************************************************************
-
 
 void weather() {
   uint8_t OR = R_ed, OG = G_reen, OB = B_lue;
@@ -1012,7 +990,6 @@ void weather() {
     fadeColor(OR, OG, OB, R_ed, G_reen, B_lue, 10);
 }
 
-
 // *************************
 //  http GET request module
 // *************************
@@ -1038,7 +1015,6 @@ String httpGETRequest(const char* serverName) {
   return payload;
 }
 
-
 void displaySerialTime() {
   Serial.println();
   Serial.println(F("          ******************** "));
@@ -1051,7 +1027,6 @@ void displaySerialTime() {
   Serial.println(F("          ******************** "));
 }
 
-
 void timedtasks(void* parameter) {
   for (;;) {
     heartBeat();
@@ -1060,7 +1035,6 @@ void timedtasks(void* parameter) {
     ntpInterval();
   }
 }
-
 
 // heartbeat of the system
 void heartBeat() {
@@ -1074,7 +1048,6 @@ void heartBeat() {
   }
 }
 
-
 // Clock time interval
 void clockInterval() {
   if ((millis() - previousTimeMillis) >= timeUpdate) {
@@ -1086,7 +1059,6 @@ void clockInterval() {
   }
 }
 
-
 // Weather time interval
 void weatherInterval() {
   if ((millis() - previousWeatherMillis) > weatherUpdate) {
@@ -1096,7 +1068,6 @@ void weatherInterval() {
     previousWeatherMillis = millis();
   }
 }
-
 
 // NTP time interval
 void ntpInterval() {
@@ -1112,3 +1083,22 @@ void ntpInterval() {
     previousNTPMillis = millis();
   }
 }
+
+uint8_t neopix_gamma[] = {
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
+  1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
+  2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
+  5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10,
+  10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
+  17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
+  25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
+  37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
+  51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
+  69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
+  90, 92, 93, 95, 96, 98, 99, 101, 102, 104, 105, 107, 109, 110, 112, 114,
+  115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137, 138, 140, 142,
+  144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
+  177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213,
+  215, 218, 220, 223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255
+};
