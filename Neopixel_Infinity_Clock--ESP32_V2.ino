@@ -193,10 +193,8 @@ void setup() {
 
   ArduinoOTA.onStart([]() {
     String type;
-    if (ArduinoOTA.getCommand() == U_FLASH)
-      type = "sketch";
-    else  // U_SPIFFS
-      type = "filesystem";
+    if (ArduinoOTA.getCommand() == U_FLASH) type = "sketch";
+    else type = "filesystem";
     Serial.println("Start updating " + type);
   });
   ArduinoOTA.onEnd([]() {
@@ -206,10 +204,8 @@ void setup() {
     Serial.printf("Progress: %u%%\r", (progress / (total / 100)));
     // While uploading, stop the time and change the LEDs from Green to Red
     stopTime = true;
-    R_ed   = map(progress / (total / 100), 0, 100, pgm_read_byte(&neopix_gamma[255]),
-      pgm_read_byte(&neopix_gamma[0]));
-    G_reen = map(progress / (total / 100), 0, 100, pgm_read_byte(&neopix_gamma[0]),
-      pgm_read_byte(&neopix_gamma[255]));
+    R_ed   = map(progress / (total / 100), 0, 100, 255, 0);
+    G_reen = map(progress / (total / 100), 0, 100, 0, 255);
     B_lue  = 0;
     // Set LED to the background color during OTA updates
     uint8_t x = constrain(map(progress / (total / 100), 0, 100, 0, NUMPIXELS - 1), 0, NUMPIXELS - 1);
@@ -221,11 +217,11 @@ void setup() {
 
   ArduinoOTA.onError([](ota_error_t error) {
     Serial.printf("Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println(F("Auth Failed"));
-    else if (error == OTA_BEGIN_ERROR) Serial.println(F("Begin Failed"));
+    if      (error == OTA_AUTH_ERROR)    Serial.println(F("Auth Failed"));
+    else if (error == OTA_BEGIN_ERROR)   Serial.println(F("Begin Failed"));
     else if (error == OTA_CONNECT_ERROR) Serial.println(F("Connect Failed"));
     else if (error == OTA_RECEIVE_ERROR) Serial.println(F("Receive Failed"));
-    else if (error == OTA_END_ERROR) Serial.println(F("End Failed"));
+    else if (error == OTA_END_ERROR)     Serial.println(F("End Failed"));
   });
   stopTime = false;
   ArduinoOTA.begin();
@@ -321,28 +317,20 @@ void timeOperations() {
   // ********************
 
   // Map and set the fading minute colors
-  mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
-    pgm_read_byte(&neopix_gamma[255]));
-  old_mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[255]),
-    pgm_read_byte(&neopix_gamma[G_reen]));
+  mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 255);
+  old_mf = map(s, 0, NUMPIXELS - 1, 255, pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Map and fade the minute backgroud intensities
-  m_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
-    pgm_read_byte(&neopix_gamma[0]));
-  oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[0]),
-    pgm_read_byte(&neopix_gamma[G_reen]));
+  m_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 0);
+  oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Map and set the fading hour colors.
-  hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
-    pgm_read_byte(&neopix_gamma[255]));
-  old_hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[255]),
-    pgm_read_byte(&neopix_gamma[G_reen]));
+  hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 255);
+  old_hf = map(m, 0, NUMPIXELS - 1, 255, pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Map and fade the hour backgroud intensities
-  h_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]),
-    pgm_read_byte(&neopix_gamma[0]));
-  oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[0]),
-    pgm_read_byte(&neopix_gamma[G_reen]));
+  h_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 0);
+  oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, pgm_read_byte(&neopix_gamma[G_reen]));
 
   // Let's place (set) the LEDs
   for (ms = 0; ms <= NUMPIXELS - 1; ms++) {
@@ -956,13 +944,17 @@ void weather() {
     Serial.println(F("°K"));
   }
 
+  // Gamma correct the red and blue values
+  R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
+  B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
+
   // Let's lighten up things if there is a good temp
   if (temperature_K >= 200)
-    G_reen = 20;
+    G_reen = pgm_read_byte(&neopix_gamma[20]);
   else {
-    R_ed = 10;
-    G_reen = 10;
-    B_lue = 10;
+    R_ed   = pgm_read_byte(&neopix_gamma[10]);
+    G_reen = pgm_read_byte(&neopix_gamma[10]);
+    B_lue  = pgm_read_byte(&neopix_gamma[10]);
   }
 
   Serial.println();
