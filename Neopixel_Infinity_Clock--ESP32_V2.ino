@@ -7,7 +7,6 @@
  *  - Weather polling for current temperature to set the background color
  *  - Strip brightness dims over the sunset time and brightens over the sunrise time
  *  - OTA updates stop the time operations and sets LEDs from green to red on progress
- *  - Default OTA password is 0000
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
@@ -21,7 +20,7 @@ bool heartbeat = LOW;
 // ******************************
 #include <TimeLib.h>  // For Date/Time operations - Time library by Michael Margolis v1.6.1
 bool stopTime = false; // OTA purpose
-#define TIMEDELAY 899.0
+#define TIMEDELAY 899.6
 
 // >>>>>>> WIFI libraries <<<<<<<
 // ******************************
@@ -92,6 +91,7 @@ uint16_t sunrise = MORNING, sunset = EVENING;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
 extern uint8_t neopix_gamma[];
+uint8_t gammamin = 103;
 
 #define CHCOLOR1  neopix_gamma[j],               0,               0                  // Red
 #define CHCOLOR2  neopix_gamma[j],               0,               0, neopix_gamma[j] // Lt. Red
@@ -151,7 +151,6 @@ time_t getNtpTime();
 
 // <<<<*** SETUP ***>>>>
 void setup() {
-
   // Creating the task for the other core
     // Function to implement the task, name of the task, stack size in words,
     // task input parameter, priority of the task, task handle, and core where the task should run
@@ -319,18 +318,30 @@ void timeOperations() {
   // Map and set the fading minute colors
   mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 255);
   old_mf = map(s, 0, NUMPIXELS - 1, 255, pgm_read_byte(&neopix_gamma[G_reen]));
+  // Gamma corrections
+  if (mf >= gammamin) mf = pgm_read_byte(&neopix_gamma[mf]);
+  if (old_mf >= gammamin) old_mf = pgm_read_byte(&neopix_gamma[old_mf]);
 
   // Map and fade the minute backgroud intensities
   m_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 0);
   oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, pgm_read_byte(&neopix_gamma[G_reen]));
+  // Gamma corrections
+  if (m_backgnd_fade >= gammamin) m_backgnd_fade = pgm_read_byte(&neopix_gamma[m_backgnd_fade]);
+  if (oldm_backgnd_fade >= gammamin) oldm_backgnd_fade = pgm_read_byte(&neopix_gamma[oldm_backgnd_fade]);
 
   // Map and set the fading hour colors.
   hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 255);
   old_hf = map(m, 0, NUMPIXELS - 1, 255, pgm_read_byte(&neopix_gamma[G_reen]));
+  // Gamma corrections
+  if (hf >= gammamin) hf = pgm_read_byte(&neopix_gamma[hf]);
+  if (old_hf >= gammamin) old_hf = pgm_read_byte(&neopix_gamma[old_hf]);
 
   // Map and fade the hour backgroud intensities
   h_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 0);
   oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, pgm_read_byte(&neopix_gamma[G_reen]));
+  // Gamma corrections
+  if (h_backgnd_fade >= gammamin) h_backgnd_fade = pgm_read_byte(&neopix_gamma[h_backgnd_fade]);
+  if (oldh_backgnd_fade >= gammamin) oldh_backgnd_fade = pgm_read_byte(&neopix_gamma[oldh_backgnd_fade]);
 
   // Let's place (set) the LEDs
   for (ms = 0; ms <= NUMPIXELS - 1; ms++) {
@@ -645,17 +656,12 @@ void sendNTPpacket(IPAddress& address) {
 }
 
 void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
-  Serial.print(F("Background Color: "));
-  Serial.print(R_ed);
-  Serial.print(F(" | "));
-  Serial.print(G_reen);
-  Serial.print(F(" | "));
-  Serial.println(B_lue);
+  Serial.println();
   Serial.println(F("Fading on the background..."));
 
   for (uint8_t b = 0; b < 255; b++) {
-    for (uint8_t l = 0; l < NUMPIXELS; l++) {
-      strip.setPixelColor(l, red * b / 60, green * b / 60, blue * b / 60);
+    for (uint8_t i = 0; i < NUMPIXELS; i++) {
+      gammaCorrected(red, green, blue, i, b, 60);
     }
     strip.show();
     delay(wait);
@@ -670,7 +676,7 @@ void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
 
   for (uint8_t b = 255; b > 0; b--) {
     for (uint8_t i = 0; i < NUMPIXELS; i++) {
-      strip.setPixelColor(i, red * b / 75, green * b / 75, blue * b / 75);
+      gammaCorrected(red, green, blue, i, b, 75);
     }
     strip.show();
     delay(wait);
@@ -689,43 +695,42 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
       if (h > 0 && m > 0 && s > 0) {  // If all are above 0, then start at zero
         if (s < h && s < m) {
           for (uint8_t l = 0; l < s; l++) // 0 --> s
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
         if (m < h && m < s) {
           for (uint8_t l = 0; l < m; l++) // 0 --> m
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m && h < s) {
           for (uint8_t l = 0; l < h; l++) // 0 --> h
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (s < m && s < h) {
         if (m < h) {
           for (uint8_t l = s + 1; l < m; l++) // (s + 1) --> m
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m) {
           for (uint8_t l = s + 1; l < h; l++) // (s + 1) --> h
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (m < h) {
         for (uint8_t l = m + 2; l < h; l++) // (m + 2) --> h
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = h + 2; l < NUMPIXELS; l++) // (h + 2) --> NUMPIXELS
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
       }
       if (h < m) {
         for (uint8_t l = h + 2; l < m; l++) // (h + 2) --> m
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = m + 2; l < NUMPIXELS; l++) // (m + 2) --> NUMPIXELS
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
       } else {
         for (uint8_t l = s + 1; l < NUMPIXELS; l++) // (s + 1) --> NUMPIXELS
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
       }
-      // Let's put all this into affect so we can see the effect
       strip.show();
       delay(wait);
       if (end_red * b / 75 >= end_red || end_green * b / 75 >= end_green || end_blue * b / 75 >= end_blue)
@@ -736,49 +741,56 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
       if (h > 0 && m > 0 && s > 0) {  // If all are above 0, then start at zero
         if (s < h && s < m) {
           for (uint8_t l = 0; l < s; l++) // 0 --> s
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
         if (m < h && m < s) {
           for (uint8_t l = 0; l < m; l++) // 0 --> m
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m && h < s) {
           for (uint8_t l = 0; l < h; l++) // 0 --> h
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (s < m && s < h) {
         if (m < h) {
           for (uint8_t l = s + 1; l < m; l++) // (s + 1) --> m
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m) {
           for (uint8_t l = s + 1; l < h; l++) // (s + 1) --> h
-            strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (m < h) {
         for (uint8_t l = m + 2; l < h; l++) // (m + 2) --> h
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = h + 2; l < NUMPIXELS; l++) // (h + 2) --> NUMPIXELS
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
       }
       if (h < m) {
         for (uint8_t l = h + 2; l < m; l++) // (h + 2) --> m
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = m + 2; l < NUMPIXELS; l++) // (m + 2) --> NUMPIXELS
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
       } else {
         for (uint8_t l = s + 1; l < NUMPIXELS; l++) // (s + 1) --> NUMPIXELS
-          strip.setPixelColor(l, end_red * b / 60, end_green * b / 60, end_blue * b / 60);
+          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
       }
-      // Let's put all this into affect so we can see the effect
       strip.show();
       delay(wait);
       if (end_red * b / 75 >= end_red || end_green * b / 75 >= end_green || end_blue * b / 75 >= end_blue)
         break;
     }
   }
+}
+
+void gammaCorrected(uint8_t red, uint8_t green, uint8_t blue, uint8_t l, uint8_t b, uint8_t div) {
+  // Let's put all this into affect so we can see the effect
+  if (red >= gammamin) red = pgm_read_byte(&neopix_gamma[red]);
+  if (green >= gammamin) green = pgm_read_byte(&neopix_gamma[green]);
+  if (blue >= gammamin) blue = pgm_read_byte(&neopix_gamma[blue]);
+  strip.setPixelColor(l, red * b / div, green * b / div, blue * b / div);
 }
 
 void whiteOverRainbow(uint8_t wait, uint8_t whiteSpeed, uint8_t whiteLength) {
@@ -945,8 +957,8 @@ void weather() {
   }
 
   // Gamma correct these values
-  if (R_ed >= 103)  R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
-  if (B_lue >= 103) B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
+  if (R_ed >= gammamin)  R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
+  if (B_lue >= gammamin) B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
 
   // Let's lighten up things if there is a good temp
   if (temperature_K >= 200)
