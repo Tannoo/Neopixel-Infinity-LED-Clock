@@ -7,6 +7,7 @@
  *  - Weather polling for current temperature to set the background color
  *  - Strip brightness dims over the sunset time and brightens over the sunrise time
  *  - OTA updates stop the time operations and sets LEDs from green to red on progress
+ *  - Default OTA password is 0000
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
