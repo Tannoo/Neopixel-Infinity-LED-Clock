@@ -8,9 +8,15 @@
  *  - Strip brightness dims over the sunset time and brightens over the sunrise time
  *  - OTA updates stop the time operations and sets LEDs from green to red on progress
  *  - Default OTA password is 0000
+ *  - Full LED gamma corrections applied
+ *  - 
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
+
+// Register for a key @ https://openweathermap.org/api
+String openWeatherMapApiKey = "*****************************";
+String city = "********";
 
 // ESP Feather32 setting up the other core
 TaskHandle_t timers;
@@ -66,10 +72,6 @@ uint8_t R_ed = 20;    // Background Red set by the weather
 uint8_t G_reen = 20;  // Background Green set by the weather
 uint8_t B_lue = 20;   // Background Blue set by the weather
 
-// Register for a key @ https://openweathermap.org/api
-String openWeatherMapApiKey = "*****************************";
-String city = "********";
-
 // "standard" = Kelvin, "imperial" = Fahrenheit, or "metric" = Celsius (will show up in serial data)
 String temp_units = "imperial";
 
@@ -92,7 +94,7 @@ uint16_t sunrise = MORNING, sunset = EVENING;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(NUMPIXELS, NEOPIN, NEOPIXEL_TYPE + NEO_KHZ800);
 
 extern uint8_t neopix_gamma[];
-uint8_t gammamin = 103;
+#define GAMMAMIN 105
 
 #define CHCOLOR1  neopix_gamma[j],               0,               0                  // Red
 #define CHCOLOR2  neopix_gamma[j],               0,               0, neopix_gamma[j] // Lt. Red
@@ -180,7 +182,9 @@ void setup() {
   // **********************************
   bool res;
   Serial.print(F("Connecting to wifi via WifiManager... "));
+  //********************************************************
   //wm.resetSettings(); // Wipe settings for experimentation
+  //********************************************************
   wm.setConnectTimeout(60);
   // This is the SSID and PASSWORD to connect and configure the wifi to run with
   res = wm.autoConnect("INFINITY_CLOCK_AP", "password");
@@ -320,29 +324,29 @@ void timeOperations() {
   mf = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 255);
   old_mf = map(s, 0, NUMPIXELS - 1, 255, pgm_read_byte(&neopix_gamma[G_reen]));
   // Gamma corrections
-  if (mf >= gammamin) mf = pgm_read_byte(&neopix_gamma[mf]);
-  if (old_mf >= gammamin) old_mf = pgm_read_byte(&neopix_gamma[old_mf]);
+  if (mf >= GAMMAMIN) mf = pgm_read_byte(&neopix_gamma[mf]);
+  if (old_mf >= GAMMAMIN) old_mf = pgm_read_byte(&neopix_gamma[old_mf]);
 
   // Map and fade the minute backgroud intensities
   m_backgnd_fade = map(s, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 0);
   oldm_backgnd_fade = map(s, 0, NUMPIXELS - 1, 0, pgm_read_byte(&neopix_gamma[G_reen]));
   // Gamma corrections
-  if (m_backgnd_fade >= gammamin) m_backgnd_fade = pgm_read_byte(&neopix_gamma[m_backgnd_fade]);
-  if (oldm_backgnd_fade >= gammamin) oldm_backgnd_fade = pgm_read_byte(&neopix_gamma[oldm_backgnd_fade]);
+  if (m_backgnd_fade >= GAMMAMIN) m_backgnd_fade = pgm_read_byte(&neopix_gamma[m_backgnd_fade]);
+  if (oldm_backgnd_fade >= GAMMAMIN) oldm_backgnd_fade = pgm_read_byte(&neopix_gamma[oldm_backgnd_fade]);
 
   // Map and set the fading hour colors.
   hf = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 255);
   old_hf = map(m, 0, NUMPIXELS - 1, 255, pgm_read_byte(&neopix_gamma[G_reen]));
   // Gamma corrections
-  if (hf >= gammamin) hf = pgm_read_byte(&neopix_gamma[hf]);
-  if (old_hf >= gammamin) old_hf = pgm_read_byte(&neopix_gamma[old_hf]);
+  if (hf >= GAMMAMIN) hf = pgm_read_byte(&neopix_gamma[hf]);
+  if (old_hf >= GAMMAMIN) old_hf = pgm_read_byte(&neopix_gamma[old_hf]);
 
   // Map and fade the hour backgroud intensities
   h_backgnd_fade = map(m, 0, NUMPIXELS - 1, pgm_read_byte(&neopix_gamma[G_reen]), 0);
   oldh_backgnd_fade = map(m, 0, NUMPIXELS - 1, 0, pgm_read_byte(&neopix_gamma[G_reen]));
   // Gamma corrections
-  if (h_backgnd_fade >= gammamin) h_backgnd_fade = pgm_read_byte(&neopix_gamma[h_backgnd_fade]);
-  if (oldh_backgnd_fade >= gammamin) oldh_backgnd_fade = pgm_read_byte(&neopix_gamma[oldh_backgnd_fade]);
+  if (h_backgnd_fade >= GAMMAMIN) h_backgnd_fade = pgm_read_byte(&neopix_gamma[h_backgnd_fade]);
+  if (oldh_backgnd_fade >= GAMMAMIN) oldh_backgnd_fade = pgm_read_byte(&neopix_gamma[oldh_backgnd_fade]);
 
   // Let's place (set) the LEDs
   for (ms = 0; ms <= NUMPIXELS - 1; ms++) {
@@ -662,7 +666,7 @@ void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
 
   for (uint8_t b = 0; b < 255; b++) {
     for (uint8_t i = 0; i < NUMPIXELS; i++) {
-      gammaCorrected(red, green, blue, i, b, 60);
+      gammaCorrect(red, green, blue, i, b, 60);
     }
     strip.show();
     delay(wait);
@@ -677,7 +681,7 @@ void FadeOffBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
 
   for (uint8_t b = 255; b > 0; b--) {
     for (uint8_t i = 0; i < NUMPIXELS; i++) {
-      gammaCorrected(red, green, blue, i, b, 75);
+      gammaCorrect(red, green, blue, i, b, 75);
     }
     strip.show();
     delay(wait);
@@ -696,41 +700,41 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
       if (h > 0 && m > 0 && s > 0) {  // If all are above 0, then start at zero
         if (s < h && s < m) {
           for (uint8_t l = 0; l < s; l++) // 0 --> s
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
         if (m < h && m < s) {
           for (uint8_t l = 0; l < m; l++) // 0 --> m
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m && h < s) {
           for (uint8_t l = 0; l < h; l++) // 0 --> h
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (s < m && s < h) {
         if (m < h) {
           for (uint8_t l = s + 1; l < m; l++) // (s + 1) --> m
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m) {
           for (uint8_t l = s + 1; l < h; l++) // (s + 1) --> h
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (m < h) {
         for (uint8_t l = m + 2; l < h; l++) // (m + 2) --> h
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = h + 2; l < NUMPIXELS; l++) // (h + 2) --> NUMPIXELS
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
       }
       if (h < m) {
         for (uint8_t l = h + 2; l < m; l++) // (h + 2) --> m
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = m + 2; l < NUMPIXELS; l++) // (m + 2) --> NUMPIXELS
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
       } else {
         for (uint8_t l = s + 1; l < NUMPIXELS; l++) // (s + 1) --> NUMPIXELS
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
       }
       strip.show();
       delay(wait);
@@ -742,41 +746,41 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
       if (h > 0 && m > 0 && s > 0) {  // If all are above 0, then start at zero
         if (s < h && s < m) {
           for (uint8_t l = 0; l < s; l++) // 0 --> s
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
         if (m < h && m < s) {
           for (uint8_t l = 0; l < m; l++) // 0 --> m
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m && h < s) {
           for (uint8_t l = 0; l < h; l++) // 0 --> h
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (s < m && s < h) {
         if (m < h) {
           for (uint8_t l = s + 1; l < m; l++) // (s + 1) --> m
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
         if (h < m) {
           for (uint8_t l = s + 1; l < h; l++) // (s + 1) --> h
-            gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+            gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         }
       }
       if (m < h) {
         for (uint8_t l = m + 2; l < h; l++) // (m + 2) --> h
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = h + 2; l < NUMPIXELS; l++) // (h + 2) --> NUMPIXELS
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
       }
       if (h < m) {
         for (uint8_t l = h + 2; l < m; l++) // (h + 2) --> m
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
         for (uint8_t l = m + 2; l < NUMPIXELS; l++) // (m + 2) --> NUMPIXELS
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
       } else {
         for (uint8_t l = s + 1; l < NUMPIXELS; l++) // (s + 1) --> NUMPIXELS
-          gammaCorrected(end_red, end_green, end_blue, l, b, 60);
+          gammaCorrect(end_red, end_green, end_blue, l, b, 60);
       }
       strip.show();
       delay(wait);
@@ -786,11 +790,14 @@ void fadeColor(uint8_t start_red, uint8_t start_green, uint8_t start_blue, uint8
   }
 }
 
-void gammaCorrected(uint8_t red, uint8_t green, uint8_t blue, uint8_t l, uint8_t b, uint8_t div) {
+void gammaCorrect(uint8_t red, uint8_t green, uint8_t blue, uint8_t l, uint8_t b, uint8_t div) {
   // Let's put all this into affect so we can see the effect
-  if (red >= gammamin) red = pgm_read_byte(&neopix_gamma[red]);
-  if (green >= gammamin) green = pgm_read_byte(&neopix_gamma[green]);
-  if (blue >= gammamin) blue = pgm_read_byte(&neopix_gamma[blue]);
+  if (red   <  GAMMAMIN) red   = map(red,   0, red,   0, GAMMAMIN - 1);
+  if (green <  GAMMAMIN) green = map(green, 0, green, 0, GAMMAMIN - 1);
+  if (blue  <  GAMMAMIN) blue  = map(blue,  0, blue,  0, GAMMAMIN - 1);
+  if (red   >= GAMMAMIN) red   = pgm_read_byte(&neopix_gamma[red]);
+  if (green >= GAMMAMIN) green = pgm_read_byte(&neopix_gamma[green]);
+  if (blue  >= GAMMAMIN) blue  = pgm_read_byte(&neopix_gamma[blue]);
   strip.setPixelColor(l, red * b / div, green * b / div, blue * b / div);
 }
 
@@ -958,16 +965,18 @@ void weather() {
   }
 
   // Gamma correct these values
-  if (R_ed >= gammamin)  R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
-  if (B_lue >= gammamin) B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
+  if (R_ed  >= GAMMAMIN) R_ed  = pgm_read_byte(&neopix_gamma[R_ed]);
+  if (B_lue >= GAMMAMIN) B_lue = pgm_read_byte(&neopix_gamma[B_lue]);
 
   // Let's lighten up things if there is a good temp
-  if (temperature_K >= 200)
-    G_reen = 20;
+  if (temperature_K >= 200) {
+    G_reen = pgm_read_byte(&neopix_gamma[104]);
+    if (G_reen >= GAMMAMIN) G_reen = pgm_read_byte(&neopix_gamma[G_reen]);
+  }
   else {
-    R_ed   = 10;
-    G_reen = 10;
-    B_lue  = 10;
+    R_ed   = pgm_read_byte(&neopix_gamma[80]);
+    G_reen = pgm_read_byte(&neopix_gamma[80]);
+    B_lue  = pgm_read_byte(&neopix_gamma[80]);
   }
 
   Serial.println();
@@ -1090,20 +1099,20 @@ void ntpInterval() {
 }
 
 uint8_t neopix_gamma[] = {
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1,
-  1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2,
-  2, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 5, 5, 5,
-  5, 6, 6, 6, 6, 7, 7, 7, 7, 8, 8, 8, 9, 9, 9, 10,
-  10, 10, 11, 11, 11, 12, 12, 13, 13, 13, 14, 14, 15, 15, 16, 16,
-  17, 17, 18, 18, 19, 19, 20, 20, 21, 21, 22, 22, 23, 24, 24, 25,
-  25, 26, 27, 27, 28, 29, 29, 30, 31, 32, 32, 33, 34, 35, 35, 36,
-  37, 38, 39, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 50,
-  51, 52, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 66, 67, 68,
-  69, 70, 72, 73, 74, 75, 77, 78, 79, 81, 82, 83, 85, 86, 87, 89,
-  90, 92, 93, 95, 96, 98, 99, 101, 102, 104, 105, 107, 109, 110, 112, 114,
-  115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137, 138, 140, 142,
-  144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175,
-  177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213,
-  215, 218, 220, 223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0, //16
+    0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   1,   1,   1,   1, //32
+    1,   1,   1,   1,   1,   1,   1,   1,   1,   2,   2,   2,   2,   2,   2,   2, //48
+    2,   3,   3,   3,   3,   3,   3,   3,   4,   4,   4,   4,   4,   5,   5,   5, //64
+    5,   6,   6,   6,   6,   7,   7,   7,   7,   8,   8,   8,   9,   9,   9,  10, //80
+   10,  10,  11,  11,  11,  12,  12,  13,  13,  13,  14,  14,  15,  15,  16,  16, //96
+   17,  17,  18,  18,  19,  19,  20,  20,  21,  21,  22,  22,  23,  24,  24,  25, //112
+   25,  26,  27,  27,  28,  29,  29,  30,  31,  32,  32,  33,  34,  35,  35,  36, //128
+   37,  38,  39,  39,  40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  50, //144
+   51,  52,  54,  55,  56,  57,  58,  59,  60,  61,  62,  63,  64,  66,  67,  68, //160
+   69,  70,  72,  73,  74,  75,  77,  78,  79,  81,  82,  83,  85,  86,  87,  89, //176
+   90,  92,  93,  95,  96,  98,  99, 101, 102, 104, 105, 107, 109, 110, 112, 114, //192
+  115, 117, 119, 120, 122, 124, 126, 127, 129, 131, 133, 135, 137, 138, 140, 142, //208
+  144, 146, 148, 150, 152, 154, 156, 158, 160, 162, 164, 167, 169, 171, 173, 175, //224
+  177, 180, 182, 184, 186, 189, 191, 193, 196, 198, 200, 203, 205, 208, 210, 213, //240
+  215, 218, 220, 223, 225, 228, 231, 233, 236, 239, 241, 244, 247, 249, 252, 255  //256
 };
