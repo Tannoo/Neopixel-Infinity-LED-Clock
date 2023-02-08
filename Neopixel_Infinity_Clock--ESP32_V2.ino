@@ -9,7 +9,6 @@
  *  - OTA updates stop the time operations and sets LEDs from green to red on progress
  *  - Default OTA password is 0000
  *  - Full LED gamma corrections applied
- *  - 
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
@@ -68,9 +67,9 @@ uint32_t heartUpdate = 1000;
 
 // Temperature setup
 double temperature;
-uint8_t R_ed = 20;    // Background Red set by the weather
-uint8_t G_reen = 20;  // Background Green set by the weather
-uint8_t B_lue = 20;   // Background Blue set by the weather
+uint8_t R_ed   = 20; // Background Red set by the weather
+uint8_t G_reen = 20; // Background Green set by the weather
+uint8_t B_lue  = 20; // Background Blue set by the weather
 
 // "standard" = Kelvin, "imperial" = Fahrenheit, or "metric" = Celsius (will show up in serial data)
 String temp_units = "imperial";
@@ -670,8 +669,12 @@ void fadeOnBackgnd(uint8_t red, uint8_t green, uint8_t blue, uint8_t wait) {
     }
     strip.show();
     delay(wait);
-    if (red * b / 75 >= red || green * b / 75 >= green || blue * b / 75 >= blue)
+    if (red >= R_ed || green >= G_reen || blue >= B_lue) {
+      for (uint8_t x = 0; x < NUMPIXELS; x++)
+        strip.setPixelColor(x, strip.Color(BACKGND));
+      strip.show();
       break;
+    }
   }
 }
 
