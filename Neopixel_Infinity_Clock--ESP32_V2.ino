@@ -9,13 +9,14 @@
  *  - OTA updates stop the time operations and sets LEDs from green to red on progress
  *  - Default OTA password is 0000
  *  - Full LED gamma corrections applied
+ *  - Daylight Savings Time has been corrected
  *
  *  CPU: Adafruit Feather32 V2 (ESP32)
  */
 
 // Register for a key @ https://openweathermap.org/api
 String openWeatherMapApiKey = "*****************************";
-String city = "********";
+String city = "Longmont";
 
 // ESP Feather32 setting up the other core
 TaskHandle_t timers;
@@ -192,7 +193,7 @@ void setup() {
 
   // >>>>>>> Start OTA Stuff <<<<<<<
   // *******************************
-  ArduinoOTA.setPassword("0000");  // OTA password
+  ArduinoOTA.setPassword("3825");  // OTA password
 
   ArduinoOTA.onStart([]() {
     String type;
@@ -277,6 +278,7 @@ void setup() {
   Serial.println(brightness);
   strip.setBrightness(brightness);
 
+  setDST;
   displaySerialTime();
 
   fadeOnBackgnd(R_ed, G_reen, B_lue, 5);
@@ -523,6 +525,7 @@ void digitalClockDisplay() {
   now();
   DateTime now = RTC.now();
   rtcTime();
+  setDST;
   ntpTime();
 
   if (now.minute() != minute()) {
@@ -552,6 +555,27 @@ void digitalClockDisplay() {
   old_hr = hr;
   oldmin = m;
   oldsec = s;
+}
+
+void setDST() {
+  // Summer Time
+  if (month() == 11 && weekday() == 1 && day() >= 1 && day() <= 7
+    && hour() == 2 && minute() == 0 && second() == 0 && DST == true)
+    DST = false;
+
+  // Winter Time
+  if (month() == 3 && weekday() == 1 && day() >= 8 && day() <= 14
+    && hour() == 2 && minute() == 0 && second() == 0 && DST == false) {
+    DST = true;
+    hr += 1;
+  }
+
+  // Check now
+  if (month() > 11 && month() < 3 && DST == true) DST = false;
+  if (month() < 11 && month() > 3 && DST == false) {
+    DST = true;
+    hr += 1;
+  }
 }
 
 void rtcTime() {
@@ -1004,7 +1028,7 @@ void weather() {
   Serial.println(B_lue);
 
   if ((OR + OG + OB) != (R_ed + G_reen + B_lue))
-    fadeColor(OR, OG, OB, R_ed, G_reen, B_lue, 10);
+    fadeColor(OR, OG, OB, R_ed, G_reen, B_lue, 20);
 }
 
 // *************************
