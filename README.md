@@ -16,6 +16,7 @@ This clock is using an Adafruit Feather 32 V2 and a DS3132 Feather wing.
     Dual-core usage to provide a more stable operations.
     OTA update progress now reflected by entire strip transitioning from green to red.
     Strip brightness dimmed to 1/4 brightness during nighttime hours.
+    Daylight Savings Time corrections.
 
 # Libraries used:
 
@@ -26,6 +27,6 @@ This clock is using an Adafruit Feather 32 V2 and a DS3132 Feather wing.
     WiFiManager       - Configuration of a wifi connection
     WiFiClient        - Support for weather data
     HTTPClient        - Support for weather data
-    Arduino_JSON      - Support weather data
+    Arduino_JSON      - Support for weather data
     ArduinoOTA        - OTA support
     RTClib            - Real time clock support by Adafruit
