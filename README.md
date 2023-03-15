@@ -16,7 +16,7 @@ This clock is using an Adafruit Feather 32 V2 and a DS3132 Feather wing.
     Dual-core usage to provide a more stable operations.
     OTA update progress now reflected by entire strip transitioning from green to red.
     Strip brightness dimmed to 1/4 brightness during nighttime hours.
-    Daylight Savings Time corrections.
+    Daylight Savings Time correction.
 
 # Libraries used:
 
