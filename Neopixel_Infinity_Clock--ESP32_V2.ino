@@ -27,7 +27,7 @@ bool heartbeat = LOW;
 // ******************************
 #include <TimeLib.h>  // For Date/Time operations - Time library by Michael Margolis v1.6.1
 bool stopTime = false; // OTA purpose
-#define TIMEDELAY 899.6
+#define TIMEDELAY 899.65
 
 // >>>>>>> WIFI libraries <<<<<<<
 // ******************************
@@ -183,7 +183,7 @@ void setup() {
   bool res;
   Serial.print(F("Connecting to wifi via WifiManager... "));
   //********************************************************
-  //wm.resetSettings(); // Wipe settings for experimentation
+  //wm.resetSettings(); // Clear WifiManager settings
   //********************************************************
   wm.setConnectTimeout(60);
   // This is the SSID and PASSWORD to connect and configure the wifi to run with
@@ -278,7 +278,7 @@ void setup() {
   Serial.println(brightness);
   strip.setBrightness(brightness);
 
-  setDST;
+  setDST();
   displaySerialTime();
 
   fadeOnBackgnd(R_ed, G_reen, B_lue, 5);
@@ -525,8 +525,8 @@ void digitalClockDisplay() {
   now();
   DateTime now = RTC.now();
   rtcTime();
-  setDST;
   ntpTime();
+  setDST();
 
   if (now.minute() != minute()) {
     Serial.print(F("RTC (m): "));
@@ -534,7 +534,7 @@ void digitalClockDisplay() {
     Serial.print(F(" vs NTP (m): "));
     Serial.println(minute());
     Serial.println(F("Updating the RTC from NTP time"));
-    RTC.adjust(DateTime(year(), month(), day(), hour(), minute(), second()));
+    RTC.adjust(DateTime(year(), month(), day(), hr, minute(), second()));
     Serial.print(F("Adjustment done »---> "));
     rtcTime();
   }
@@ -604,7 +604,7 @@ void rtcTime() {
 
 void ntpTime() {
   // NTP Time
-  now();
+  now();  
   Serial.print(F("NTP Time: "));
   printDigits(month());
   Serial.print(F("/"));
